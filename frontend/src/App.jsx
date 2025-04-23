@@ -1,4 +1,4 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router-dom'
 import Home from './pages/home/Home' 
 import Progress from './components/sidebar/Progress'
 import TechnicalRound from './components/sidebar/TechnicalRound'
@@ -10,14 +10,17 @@ import Analytics from './components/sidebar/Analytics'
 import Login from './pages/login/Login'
 import SignUp from './pages/signup/SignUp'
 import { Toaster } from 'react-hot-toast'
+import { useAuthContext } from './context/AuthContext'
 
 function App() {
+  const { authUser } = useAuthContext();
   return (
-    <BrowserRouter>
+    <div>
       <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<SignUp />} />
-        <Route path="/" element={<Home />}>
+        <Route path="/login" element={authUser ? <Navigate to='/' /> : <Login />} />
+        <Route path="/signup" element={authUser ? <Navigate to='/' /> : <SignUp />} />
+
+        <Route path="/" element={authUser ? <Home /> : <Navigate to='/login' />}>
           <Route path="progress" element={<Progress />} />
           <Route path="technical-round" element={<TechnicalRound />} />
           <Route path="hr-round" element={<HrRound />} />
@@ -28,7 +31,7 @@ function App() {
         </Route>
       </Routes>
       <Toaster/>
-    </BrowserRouter>
+    </div>
   )
 }
 

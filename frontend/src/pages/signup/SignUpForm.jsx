@@ -1,10 +1,10 @@
 import React, { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import GenderCheckbox from './GenderCheckbox'
 import useSignup from '../../hooks/useSignup'
 
 export default function SignUpForm() {
-  const navigate = useNavigate();
+
   const [inputs, setInputs] = useState({
     username: '',
     email: '',
@@ -29,8 +29,6 @@ export default function SignUpForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     await signup(inputs);
-    // If signup is successful, navigate to login
-    navigate('/login');
   };
 
   return (
