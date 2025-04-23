@@ -9,6 +9,7 @@ import Profile from './components/sidebar/Profile'
 import Analytics from './components/sidebar/Analytics'
 import Login from './pages/login/Login'
 import SignUp from './pages/signup/SignUp'
+import { Toaster } from 'react-hot-toast'
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
           <Route path="analytics" element={<Analytics />} />
         </Route>
       </Routes>
+      <Toaster/>
     </BrowserRouter>
   )
 }

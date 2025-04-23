@@ -1,16 +1,49 @@
-import React from 'react'
-import { Link } from 'react-router-dom'
+import React, { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import GenderCheckbox from './GenderCheckbox'
+import useSignup from '../../hooks/useSignup'
 
 export default function SignUpForm() {
+  const navigate = useNavigate();
+  const [inputs, setInputs] = useState({
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    gender: '',
+  });
+
+  const { loading, signup } = useSignup();
+
+  const handleCheckboxChange = (gender) => {
+    setInputs({ ...inputs, gender });
+  };
+
+  const handleChange = (e) => {
+    setInputs((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    await signup(inputs);
+    // If signup is successful, navigate to login
+    navigate('/login');
+  };
+
   return (
-    <form className="space-y-4">
+    <form className="space-y-4" onSubmit={handleSubmit}>
       {/* Username Input */}
       <div className="space-y-1">
         <label className="text-sm font-medium text-gray-300">Username</label>
         <div className="relative">
           <input
             type="text"
+            name="username"
+            value={inputs.username}
+            onChange={handleChange}
             placeholder="Enter your username"
             className="w-full pl-10 pr-4 py-2 rounded-lg bg-gray-800/50 border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
           />
@@ -28,6 +61,9 @@ export default function SignUpForm() {
         <div className="relative">
           <input
             type="email"
+            name="email"
+            value={inputs.email}
+            onChange={handleChange}
             placeholder="Enter your email"
             className="w-full pl-10 pr-4 py-2 rounded-lg bg-gray-800/50 border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
           />
@@ -45,6 +81,9 @@ export default function SignUpForm() {
         <div className="relative">
           <input
             type="password"
+            name="password"
+            value={inputs.password}
+            onChange={handleChange}
             placeholder="Enter your password"
             className="w-full pl-10 pr-4 py-2 rounded-lg bg-gray-800/50 border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
           />
@@ -62,6 +101,9 @@ export default function SignUpForm() {
         <div className="relative">
           <input
             type="password"
+            name="confirmPassword"
+            value={inputs.confirmPassword}
+            onChange={handleChange}
             placeholder="Confirm your password"
             className="w-full pl-10 pr-4 py-2 rounded-lg bg-gray-800/50 border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
           />
@@ -74,7 +116,7 @@ export default function SignUpForm() {
       </div>
 
       {/* Gender Checkbox */}
-      <GenderCheckbox />
+      <GenderCheckbox onCheckboxChange={handleCheckboxChange} selectedGender={inputs.gender} />
 
       {/* Already have account text */}
       <div className="text-sm text-gray-400">
@@ -87,12 +129,22 @@ export default function SignUpForm() {
       {/* Sign Up Button */}
       <button
         type="submit"
-        className="w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center justify-center space-x-2"
+        disabled={loading}
+        className="w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center justify-center space-x-2 disabled:opacity-70 disabled:cursor-not-allowed"
       >
-        <span>Create Account</span>
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3" />
-        </svg>
+        {loading ? (
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 border-t-2 border-b-2 border-white rounded-full animate-spin" />
+            <span>Creating Account...</span>
+          </div>
+        ) : (
+          <>
+            <span>Create Account</span>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3" />
+            </svg>
+          </>
+        )}
       </button>
     </form>
   )
