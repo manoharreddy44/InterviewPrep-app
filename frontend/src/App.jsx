@@ -1,34 +1,32 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import Home from './pages/home/Home' 
+import Progress from './components/sidebar/Progress'
+import TechnicalRound from './components/sidebar/TechnicalRound'
+import HrRound from './components/sidebar/HrRound'
+import GroupDiscussions from './components/sidebar/GroupDiscussions'
+import Feedback from './components/sidebar/Feedback'
+import Profile from './components/sidebar/Profile'
+import Analytics from './components/sidebar/Analytics'
+import Login from './pages/login/Login'
+import SignUp from './pages/signup/SignUp'
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<SignUp />} />
+        <Route path="/" element={<Home />}>
+          <Route path="progress" element={<Progress />} />
+          <Route path="technical-round" element={<TechnicalRound />} />
+          <Route path="hr-round" element={<HrRound />} />
+          <Route path="group-discussions" element={<GroupDiscussions />} />
+          <Route path="feedback" element={<Feedback />} />
+          <Route path="profile" element={<Profile />} />
+          <Route path="analytics" element={<Analytics />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
   )
 }
 
