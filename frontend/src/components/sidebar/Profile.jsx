@@ -1,16 +1,73 @@
-import React, { useState } from 'react'
+import React, { useState, useCallback } from 'react'
 import { useAuthContext } from '../../context/AuthContext'
 import useLogout from '../../hooks/useLogout'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
+import { useUpdateProfile } from '../../hooks/useUpdateProfile'
+import { useDropzone } from 'react-dropzone'
+import * as pdfjsLib from 'pdfjs-dist'
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
 
 export default function Profile() {
-  const { authUser, setAuthUser } = useAuthContext();
+  const { authUser } = useAuthContext();
   const { logout } = useLogout();
   const navigate = useNavigate();
+  const { loading, updateProfile } = useUpdateProfile();
+
   const [formData, setFormData] = useState({
     username: authUser?.username || '',
-    password: ''
+    password: '',
+    resumeText: '',
+  });
+
+  const onDrop = useCallback((acceptedFiles) => {
+    const file = acceptedFiles[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('File size should be less than 5MB');
+        return;
+      }
+
+      if (file.type !== 'application/pdf') {
+        toast.error('Please upload a PDF file');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const pdfData = new Uint8Array(e.target.result);
+          const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
+          let text = '';
+
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const content = await page.getTextContent();
+            const strings = content.items.map(item => item.str);
+            text += strings.join(' ') + '\n';
+          }
+
+          setFormData(prev => ({
+            ...prev,
+            resumeText: text
+          }));
+          toast.success('PDF processed successfully');
+        } catch (error) {
+          console.error('Error processing PDF:', error);
+          toast.error('Error processing PDF file');
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+  }, []);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      'application/pdf': ['.pdf']
+    },
+    maxFiles: 1
   });
 
   const handleChange = (e) => {
@@ -22,47 +79,67 @@ export default function Profile() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    toast.success('Profile updated successfully');
+
+    const dataToUpdate = {};
+
+    if (formData.username.trim() && formData.username !== authUser.username) {
+      dataToUpdate.username = formData.username;
+    }
+
+    if (formData.password.trim()) {
+      dataToUpdate.password = formData.password;
+    }
+
+    if (formData.resumeText) {
+      dataToUpdate.resume = formData.resumeText;
+    }
+
+    if (Object.keys(dataToUpdate).length > 0) {
+      await updateProfile(dataToUpdate);
+    } else {
+      toast('No changes to update.');
+    }
   };
 
   const handleDeleteAccount = async () => {
     if (window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
-      // await logout();
-      // navigate('/login');
-    }
-  };
+      try {
+        const res = await fetch(`/api/user/delete/${authUser._id}`, {
+          method: 'DELETE',
+          credentials: 'include',
+        });
 
-  const handleResumeUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        toast.error('File size should be less than 5MB');
-        return;
+        const data = await res.json();
+
+        if (data.error) {
+          throw new Error(data.error);
+        }
+
+        await logout();
+        navigate('/login');
+      } catch (error) {
+        toast.error(error.message);
       }
-      toast.success('Resume uploaded successfully');
     }
   };
 
   return (
     <div className="min-h-screen bg-base-200 p-4">
       <div className="max-w-md mx-auto">
-        {/* Header */}
         <h1 className="text-2xl font-bold text-center mb-4 text-primary">
           Profile
         </h1>
 
-        {/* Profile Section */}
         <div className="bg-base-100 rounded-2xl shadow-xl border border-base-300">
-          {/* Profile Picture Section */}
           <div className="p-4 pb-2">
             <div className="flex flex-col items-center">
               <div className="relative">
                 <img
-                  src={authUser?.profilePic}
+                  src={authUser?.profilePic || '/default-avatar.png'}
                   alt="Profile"
                   className="w-20 h-20 rounded-full object-cover ring-2 ring-primary/30 ring-offset-2 ring-offset-base-100"
                 />
-                <button 
+                <button
                   className="absolute bottom-0 right-0 bg-base-100 rounded-full p-1.5 shadow-md hover:bg-base-200 transition-colors border border-base-300"
                   aria-label="Change photo"
                 >
@@ -74,7 +151,6 @@ export default function Profile() {
             </div>
           </div>
 
-          {/* Form Section */}
           <div className="px-4 pb-4">
             <form onSubmit={handleSubmit} className="space-y-3">
               <div className="form-control">
@@ -101,7 +177,7 @@ export default function Profile() {
                   value={formData.password}
                   onChange={handleChange}
                   className="input input-bordered bg-base-200/50 w-full rounded-xl focus:ring-2 ring-primary/50 h-9"
-                  placeholder="Enter password to confirm changes"
+                  placeholder="Enter new password"
                 />
               </div>
 
@@ -110,36 +186,34 @@ export default function Profile() {
                 <label className="label py-1">
                   <span className="label-text text-base-content/70">Resume</span>
                 </label>
-                <div className="flex items-center">
-                  <div className="flex-1">
-                    <label className="flex flex-col items-center justify-center w-full h-20 border-2 border-base-300 border-dashed rounded-xl cursor-pointer bg-base-200/50 hover:bg-base-200 transition-colors">
-                      <div className="flex flex-col items-center justify-center py-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-base-content/70 mb-1">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12l-3-3m0 0l-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                        </svg>
-                        <p className="text-xs text-base-content/70">Upload Resume (PDF, DOC, DOCX)</p>
-                        <p className="text-xs text-base-content/50">Max size: 5MB</p>
-                      </div>
-                      <input 
-                        type="file" 
-                        className="hidden" 
-                        accept=".pdf,.doc,.docx"
-                        onChange={handleResumeUpload}
-                      />
-                    </label>
+                <div
+                  {...getRootProps()}
+                  className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-xl cursor-pointer transition-colors ${
+                    isDragActive ? 'border-primary bg-primary/10' : 'border-base-300 bg-base-200/50 hover:bg-base-200'
+                  }`}
+                >
+                  <input {...getInputProps()} />
+                  <div className="flex flex-col items-center justify-center py-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-base-content/70 mb-1">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12l-3-3m0 0l-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                    </svg>
+                    <p className="text-xs text-base-content/70">
+                      {formData.resume ? formData.resume.name : 'Drag & drop your resume here, or click to select'}
+                    </p>
+                    <p className="text-xs text-base-content/50">PDF only, max size: 5MB</p>
                   </div>
                 </div>
               </div>
 
               <button
                 type="submit"
+                disabled={loading}
                 className="btn btn-primary btn-sm w-full rounded-xl mt-2"
               >
-                Update Profile
+                {loading ? 'Updating...' : 'Update Profile'}
               </button>
             </form>
 
-            {/* Action Buttons */}
             <div className="flex justify-between mt-4 pt-3 text-xs border-t border-base-300">
               <button
                 onClick={handleDeleteAccount}
@@ -158,5 +232,5 @@ export default function Profile() {
         </div>
       </div>
     </div>
-  )
+  );
 }
