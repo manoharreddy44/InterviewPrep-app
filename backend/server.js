@@ -4,6 +4,8 @@ import cookie from 'cookie-parser';
 import authRoutes from './routes/auth.routes.js';
 import connectToMongoDB from './db/connectToMongoDB.js';
 import userRoutes from './routes/user.routes.js';
+import interviewRoutes from './routes/interview.routes.js';
+import reportRoutes from './routes/report.routes.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -17,6 +19,8 @@ app.use(cookie());
 
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/interview', interviewRoutes);
+app.use('/api/report', reportRoutes)
 
 app.listen(PORT, () => {
   connectToMongoDB();
