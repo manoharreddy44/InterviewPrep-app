@@ -1,10 +1,10 @@
 import express from 'express';
 import { protectRoute } from '../middleware/protectRoute.js';
-import { feedBack } from '../controllers/report.controller.js';
+import { getInterviewByType } from '../controllers/report.controller.js';
 
 const router = express.Router();
 
-
-router.get('/gd/:id', protectRoute, feedBack)
+// Get specific interview by ID
+router.post('/', protectRoute, getInterviewByType);
 
 export default router;
