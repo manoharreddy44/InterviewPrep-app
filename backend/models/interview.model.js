@@ -13,7 +13,7 @@ const interviewSchema = new mongoose.Schema({
   },
   topic: {
     type: String,
-    required: true
+    required: false
   },
   response: {
     type: String,

@@ -2,12 +2,15 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 export default function Feedback() {
-  const [selectedType, setSelectedType] = useState('GD');
+  const interviewTypes = [
+    { label: 'GD', value: 'GD' },
+    { label: 'HR', value: 'HR' },
+    { label: 'Technical', value: 'TECHNICAL' },
+  ];
+  const [selectedType, setSelectedType] = useState(interviewTypes[0].value);
   const [interviews, setInterviews] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedInterview, setSelectedInterview] = useState(null);
-
-  const interviewTypes = ['GD', 'HR', 'Technical'];
 
   useEffect(() => {
     fetchInterviews();
@@ -20,7 +23,12 @@ export default function Feedback() {
         interviewType: selectedType
       });
       const interviewsWithFeedback = response.data.interviews.filter(
-        interview => interview.score && interview.score.feedBack
+        interview => {
+          if (interview.interview_type === 'TECHNICAL') {
+            return interview.score && interview.score.finalEvaluation;
+          }
+          return interview.score && interview.score.feedBack;
+        }
       );
       setInterviews(interviewsWithFeedback || []);
       setSelectedInterview(null);
@@ -49,7 +57,7 @@ export default function Feedback() {
               </span>
             </div>
             <h3 className="font-semibold text-base-content line-clamp-2 group-hover:text-primary transition-colors">
-              {interview.topic}
+              {interview.topic || 'Technical Interview'}
             </h3>
           </div>
         </div>
@@ -59,7 +67,9 @@ export default function Feedback() {
           <div className="relative">
             <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-transparent to-base-100 z-10" />
             <p className="text-sm text-base-content/80 line-clamp-4 relative">
-              {interview.score.feedBack}
+              {interview.interview_type === 'TECHNICAL'
+                ? interview.score.finalEvaluation.feedback
+                : interview.score.feedBack}
             </p>
           </div>
         </div>
@@ -99,7 +109,9 @@ export default function Feedback() {
                 {new Date(interview.createdAt).toLocaleDateString()}
               </span>
             </div>
-            <h2 className="text-xl font-bold text-base-content">{interview.topic}</h2>
+            <h2 className="text-xl font-bold text-base-content">
+              {interview.topic || 'Technical Interview'}
+            </h2>
           </div>
           <button
             onClick={onClose}
@@ -110,12 +122,41 @@ export default function Feedback() {
         </div>
 
         <div className="space-y-4">
-          <div className="p-5 bg-primary/5 rounded-xl">
-            <h4 className="font-semibold text-primary mb-3">Feedback</h4>
-            <p className="text-base-content/90 whitespace-pre-wrap leading-relaxed">
-              {interview.score.feedBack}
-            </p>
-          </div>
+          {interview.interview_type === 'TECHNICAL' ? (
+            <div className="space-y-6">
+              {/* Questions and Answers with Feedback */}
+              {Object.entries(interview.score)
+                .filter(([key]) => key.startsWith('question_'))
+                .map(([key, value]) => (
+                  <div key={key} className="bg-base-200 p-4 rounded-xl">
+                    <h4 className="font-semibold text-primary mb-2">Question {key.split('_')[1]}</h4>
+                    <p className="text-base-content/90 mb-3">{value.question}</p>
+                    <p className="text-base-content/80 mb-2">
+                      <span className="font-medium">Response:</span> {value.response}
+                    </p>
+                    <div className="text-sm mt-1">
+                      <span className="font-medium">Feedback:</span> {value.feedback}
+                    </div>
+                  </div>
+                ))}
+              {/* Final Feedback */}
+              {interview.score.finalEvaluation && (
+                <div className="p-5 bg-primary/5 rounded-xl">
+                  <h4 className="font-semibold text-primary mb-3">Final Feedback</h4>
+                  <p className="text-base-content/90 whitespace-pre-wrap leading-relaxed">
+                    {interview.score.finalEvaluation.feedback}
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="p-5 bg-primary/5 rounded-xl">
+              <h4 className="font-semibold text-primary mb-3">Feedback</h4>
+              <p className="text-base-content/90 whitespace-pre-wrap leading-relaxed">
+                {interview.score.feedBack}
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -130,13 +171,13 @@ export default function Feedback() {
         <div className="flex flex-wrap gap-4 mb-8 justify-center">
           {interviewTypes.map((type) => (
             <button
-              key={type}
-              onClick={() => setSelectedType(type)}
+              key={type.value}
+              onClick={() => setSelectedType(type.value)}
               className={`btn btn-sm rounded-full ${
-                selectedType === type ? 'btn-primary' : 'btn-ghost'
+                selectedType === type.value ? 'btn-primary' : 'btn-ghost'
               }`}
             >
-              {type}
+              {type.label}
             </button>
           ))}
         </div>

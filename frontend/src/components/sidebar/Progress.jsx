@@ -2,12 +2,15 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 export default function Progress() {
-  const [selectedType, setSelectedType] = useState('GD');
+  const interviewTypes = [
+    { label: 'GD', value: 'GD' },
+    { label: 'HR', value: 'HR' },
+    { label: 'Technical', value: 'TECHNICAL' },
+  ];
+  const [selectedType, setSelectedType] = useState(interviewTypes[0].value);
   const [interviews, setInterviews] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedInterview, setSelectedInterview] = useState(null);
-
-  const interviewTypes = ['GD', 'HR', 'Technical'];
 
   useEffect(() => {
     fetchInterviews();
@@ -46,7 +49,7 @@ export default function Progress() {
               </span>
             </div>
             <h3 className="font-semibold text-base-content line-clamp-1 group-hover:text-primary transition-colors mt-1">
-              {interview.topic}
+              {interview.topic || 'Technical Interview'}
             </h3>
           </div>
         </div>
@@ -55,22 +58,74 @@ export default function Progress() {
         <div className="flex-1">
           <div className="relative">
             <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-transparent to-base-100 z-10" />
-            <div className="grid grid-cols-2 gap-1.5 relative">
+            <div className="space-y-2 relative">
               {interview.score ? (
-                Object.entries(interview.score).map(([key, value]) => {
-                  if (key !== 'feedBack' && key !== 'OverallScore') {
-                    return (
-                      <div
-                        key={key}
-                        className="bg-base-200/50 p-1.5 rounded-lg flex flex-col items-center"
-                      >
-                        <div className="text-[10px] text-base-content/60">{key}</div>
-                        <div className="text-sm font-bold text-base-content">{value}</div>
+                interview.interview_type === 'TECHNICAL' ? (
+                  // Technical Interview Score Display
+                  <>
+                    {/* List only the scores for each question */}
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {Object.entries(interview.score)
+                        .filter(([key]) => key.startsWith('question_'))
+                        .map(([key, value], idx) => (
+                          <div key={key} className="bg-base-200/50 p-1.5 rounded-lg flex flex-col items-center">
+                            <div className="text-[10px] text-base-content/60">Q{idx + 1}</div>
+                            <div className="text-sm font-bold text-base-content">{value.score}</div>
+                          </div>
+                        ))}
+                    </div>
+                    {/* Final Evaluation (only the required fields) */}
+                    {interview.score.finalEvaluation && (
+                      <div className="bg-primary/5 p-2 rounded-lg mt-2">
+                        <div className="text-xs font-semibold text-primary mb-1">Final Evaluation</div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <div className="text-xs text-base-content/70">Technical Knowledge</div>
+                            <div className="text-base font-bold text-primary">
+                              {interview.score.finalEvaluation.technicalKnowledge}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-base-content/70">Problem Solving Skills</div>
+                            <div className="text-base font-bold text-primary">
+                              {interview.score.finalEvaluation.problemSolvingSkills}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-base-content/70">Communication Skills</div>
+                            <div className="text-base font-bold text-primary">
+                              {interview.score.finalEvaluation.communicationSkills}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-base-content/70">Overall Score</div>
+                            <div className="text-base font-bold text-primary">
+                              {interview.score.finalEvaluation.overallScore}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    );
-                  }
-                  return null;
-                })
+                    )}
+                  </>
+                ) : (
+                  // Other Interview Types Score Display
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {Object.entries(interview.score).map(([key, value]) => {
+                      if (key !== 'feedBack' && key !== 'OverallScore') {
+                        return (
+                          <div
+                            key={key}
+                            className="bg-base-200/50 p-1.5 rounded-lg flex flex-col items-center"
+                          >
+                            <div className="text-[10px] text-base-content/60">{key}</div>
+                            <div className="text-sm font-bold text-base-content">{value}</div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })}
+                  </div>
+                )
               ) : (
                 <div className="col-span-2 text-center text-xs text-base-content/60 py-1">
                   No score available yet
@@ -115,7 +170,9 @@ export default function Progress() {
                 {new Date(interview.createdAt).toLocaleDateString()}
               </span>
             </div>
-            <h2 className="text-xl font-bold text-base-content">{interview.topic}</h2>
+            <h2 className="text-xl font-bold text-base-content">
+              {interview.topic || 'Technical Interview'}
+            </h2>
           </div>
           <button
             onClick={onClose}
@@ -127,22 +184,71 @@ export default function Progress() {
 
         <div className="space-y-4">
           {interview.score ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {Object.entries(interview.score).map(([key, value]) => {
-                if (key !== 'feedBack') {
-                  return (
-                    <div
-                      key={key}
-                      className="bg-base-200 p-4 rounded-xl flex flex-col items-center"
-                    >
-                      <div className="text-sm text-base-content/70">{key}</div>
-                      <div className="text-xl font-bold text-primary mt-1">{value}</div>
+            interview.interview_type === 'TECHNICAL' ? (
+              // Technical Interview Details (score-only)
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(interview.score)
+                    .filter(([key]) => key.startsWith('question_'))
+                    .map(([key, value], idx) => (
+                      <div key={key} className="bg-base-200 p-4 rounded-xl flex flex-col items-center">
+                        <div className="text-xs text-base-content/60 mb-1">Q{idx + 1}</div>
+                        <div className="text-xl font-bold text-primary">{value.score}</div>
+                      </div>
+                    ))}
+                </div>
+                {/* Final Evaluation (only the required fields) */}
+                {interview.score.finalEvaluation && (
+                  <div className="bg-primary/5 p-4 rounded-xl mt-4">
+                    <h4 className="font-semibold text-primary mb-3">Final Evaluation</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <div className="text-sm text-base-content/70">Technical Knowledge</div>
+                        <div className="text-xl font-bold text-primary">
+                          {interview.score.finalEvaluation.technicalKnowledge}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-base-content/70">Problem Solving Skills</div>
+                        <div className="text-xl font-bold text-primary">
+                          {interview.score.finalEvaluation.problemSolvingSkills}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-base-content/70">Communication Skills</div>
+                        <div className="text-xl font-bold text-primary">
+                          {interview.score.finalEvaluation.communicationSkills}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-base-content/70">Overall Score</div>
+                        <div className="text-xl font-bold text-primary">
+                          {interview.score.finalEvaluation.overallScore}
+                        </div>
+                      </div>
                     </div>
-                  );
-                }
-                return null;
-              })}
-            </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              // Other Interview Types Details
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {Object.entries(interview.score).map(([key, value]) => {
+                  if (key !== 'feedBack') {
+                    return (
+                      <div
+                        key={key}
+                        className="bg-base-200 p-1.5 rounded-lg flex flex-col items-center"
+                      >
+                        <div className="text-[10px] text-base-content/60">{key}</div>
+                        <div className="text-sm font-bold text-base-content">{value}</div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })}
+              </div>
+            )
           ) : (
             <div className="text-center text-base-content/70 py-8">
               No score available yet
@@ -162,13 +268,13 @@ export default function Progress() {
         <div className="flex flex-wrap gap-4 mb-8 justify-center">
           {interviewTypes.map((type) => (
             <button
-              key={type}
-              onClick={() => setSelectedType(type)}
+              key={type.value}
+              onClick={() => setSelectedType(type.value)}
               className={`btn btn-sm rounded-full ${
-                selectedType === type ? 'btn-primary' : 'btn-ghost'
+                selectedType === type.value ? 'btn-primary' : 'btn-ghost'
               }`}
             >
-              {type}
+              {type.label}
             </button>
           ))}
         </div>

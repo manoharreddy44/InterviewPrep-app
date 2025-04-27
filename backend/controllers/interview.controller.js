@@ -1,5 +1,6 @@
 import { openai } from "../openAi/connectToOpenAI.js";
 import Interview from "../models/interview.model.js";
+import User from "../models/user.model.js";
 
 export const groupDiscussion = async (req, res) => {
   const prompt = `
@@ -156,3 +157,285 @@ Return ONLY valid JSON in this exact format:
   }
 };
 
+
+export const generateTechnicalQuestion = async (req, res) => {
+  const { jobRole, experience, jobDescription, previousQuestionScore, interviewId } = req.body;
+  const userId = req.user._id;
+  const user = await User.findById(userId);
+  if (!user) {
+    return res.status(404).json({ success: false, error: "User not found" });
+  }
+
+  const resume = user.resume;
+  if (!resume) {
+    return res.status(400).json({ success: false, error: "Resume not found for the user" });
+  }
+  
+  try {
+    const prompt = `
+      Generate a technical interview question based on the following details:
+      - Job Role: ${jobRole}
+      - Experience Level: ${experience}
+      - Job Description: ${jobDescription}
+      - Previous Question Score: ${previousQuestionScore || "N/A"}
+      - Candidate Resume: ${resume}
+
+      Rules:
+      1. If the previous score is above 70, slightly increase the difficulty by asking a deeper or real-world scenario-based question.
+      2. The question must be strictly relevant to the job role, experience, and skills mentioned in the resume.
+      3. The question should test practical knowledge, problem-solving ability, and real-world application.
+      4. Return ONLY the question in a **single line** without any explanation or additional text.
+      `;
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const question = response.choices[0]?.message?.content?.trim() || "No question generated";
+    let interview;
+    if (interviewId) {
+      interview = await Interview.findById(interviewId);
+      if (!interview) {
+        return res.status(404).json({ success: false, error: "Interview not found" });
+      }
+      if (!interview.score) interview.score = {};
+    } else {
+      interview = new Interview({
+        user_id: req.user._id,
+        interview_type: "TECHNICAL",
+        score: {}
+      });
+    }
+    // Find next question key
+    const questionKeys = Object.keys(interview.score)
+      .filter(k => k.startsWith("question_"))
+      .map(k => parseInt(k.split("_")[1], 10))
+      .filter(n => !isNaN(n));
+
+    const nextNum = questionKeys.length > 0 ? Math.max(...questionKeys) + 1 : 1;
+    const questionKey = `question_${nextNum}`;
+
+    // Prepare the update for the score object
+    const scoreUpdate = {
+      ...interview.score,
+      [questionKey]: {
+        question,
+        response: "",
+        score: 0,
+        feedback: ""
+      }
+    };
+    
+    // Save the updated interview with the new score object
+    interview.score = scoreUpdate;
+    await interview.save();
+
+    res.status(200).json({
+      success: true,
+      question,
+      interviewId: interview._id,
+      questionKey,
+      score: interview.score
+    });
+  } catch (error) {
+    console.error("Error generating technical question:", error.message || error);
+    res.status(500).json({ success: false, error: "Failed to generate technical question" });
+  }
+};
+
+export const submitTechnicalResponse = async (req, res) => {
+  const { interviewId, response } = req.body;
+
+  try {
+    const interview = await Interview.findById(interviewId);
+    if (!interview) return res.status(404).json({ success: false, error: "Interview not found" });
+    if (!interview.score) interview.score = {};
+
+    // Get the latest question key
+    const questionKeys = Object.keys(interview.score)
+      .filter(k => k.startsWith("question_"))
+      .sort((a, b) => {
+        const numA = parseInt(a.split("_")[1]);
+        const numB = parseInt(b.split("_")[1]);
+        return numB - numA; // Descending
+      });
+
+    if (questionKeys.length === 0) {
+      return res.status(400).json({ success: false, error: "No questions found" });
+    }
+
+    const latestKey = questionKeys[0];
+    const currentQuestionObj = interview.score[latestKey];
+
+    // Generate evaluation prompt
+    const evaluationPrompt = `
+      Strictly evaluate the following technical interview response:
+      - Question: "${currentQuestionObj.question}"
+      - Response: "${response}"
+
+      Evaluation Criteria:
+      1. If the response is irrelevant or partially correct, give a low score (below 50).
+      2. Evaluate on the following:
+        - Accuracy of Answer
+        - Practical Understanding
+        - Completeness and Relevance
+      3. Be strict about incorrect or vague responses.
+
+      Return ONLY valid JSON in this exact format:
+      {
+        "responseScore": "score/100",
+        "feedBack": "Give 2 to 3 clear sentences mentioning specific strengths and weaknesses."
+      }
+      `;
+
+
+    const evaluationResponse = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [{ role: "user", content: evaluationPrompt }],
+    });
+
+    const rawText = evaluationResponse.choices[0]?.message?.content || "";
+    let evaluation;
+    try {
+      evaluation = JSON.parse(rawText);
+    } catch (error) {
+      console.error("OpenAI Response (Raw):", rawText);
+      return res.status(500).json({ success: false, error: "Failed to parse evaluation" });
+    }
+
+    // Extract score (handle "85/100" format)
+    const [scoreValue] = String(evaluation.responseScore).split("/");
+    const numericScore = parseInt(scoreValue) || 0;
+
+    // Update the question
+    interview.score[latestKey].response = response;
+    interview.score[latestKey].score = numericScore;
+    interview.score[latestKey].feedback = evaluation.feedBack || "No feedback provided";
+
+    // Save interview
+    await Interview.findByIdAndUpdate(interview._id, { score: interview.score }, { new: true });
+    await interview.save();
+
+    // Optionally, get the previous question/answer object (if it exists)
+    let prevQuestionObj = null;
+    if (questionKeys.length > 1) {
+      const prevKey = questionKeys[1];
+      prevQuestionObj = interview.score[prevKey];
+    }
+
+    res.status(200).json({
+      success: true,
+      question: currentQuestionObj.question,
+      feedback: evaluation.feedBack,
+      currentQuestionScore: numericScore,
+      interviewId: interview._id,
+      questionKey: latestKey,
+      prevQuestionObj // <-- This is the previous question/answer object, or null if not present
+    });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ success: false, error: "Internal server error" });
+  }
+};
+
+export const evaluateTechnicalResponse = async (req, res) => {
+  const { interviewId } = req.body;
+
+  try {
+    const interview = await Interview.findById(interviewId);
+    if (!interview) return res.status(404).json({ success: false, error: "Interview not found" });
+    if (!interview.score) return res.status(400).json({ success: false, error: "No questions found" });
+
+ 
+    // Extract all questions
+    const questions = Object.keys(interview.score)
+      .filter(k => k.startsWith("question_"))
+      .map(k => interview.score[k]);
+
+    if (questions.length === 0) {
+      return res.status(400).json({ success: false, error: "No questions to evaluate" });
+    }
+
+    // Generate evaluation prompt
+    const evaluationPrompt = `
+      Strictly evaluate the following face-to-face technical interview responses:
+      - Questions and Responses: ${JSON.stringify(questions)}
+
+      Evaluation Criteria:
+      1. If the responses are irrelevant, incomplete, or not aligned to the questions, assign low domain scores.
+      2. Score breakdown:
+        - Technical Knowledge (out of 40)
+        - Problem-Solving Skills (out of 30)
+        - Communication Skills (out of 30): Evaluate grammar, clarity, and use of relevant technical keywords in the answers.
+      3. The OverallScore is the sum of all domain scores (out of 100).
+      4. Be strict with poor or vague technical answers.
+
+      Return ONLY valid JSON exactly like this:
+      {
+        "TechnicalKnowledge": "score/40",
+        "ProblemSolvingSkills": "score/30",
+        "CommunicationSkills": "score/30",
+        "OverallScore": "score/100",
+        "feedBack": "Give 2 to 3 clear sentences mentioning key strengths and weaknesses across the responses."
+      }
+      `;
+
+    
+
+    const evaluationResponse = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [{ role: "user", content: evaluationPrompt }],
+    });
+
+    const rawText = evaluationResponse.choices[0]?.message?.content || "";
+    let evaluation;
+    try {
+      evaluation = JSON.parse(rawText);
+    } catch (error) {
+      console.error("OpenAI Response (Raw):", rawText);
+      return res.status(500).json({ success: false, error: "Failed to parse evaluation" });
+    }
+
+    function extractAndCap(val, max) {
+      const n = parseInt(String(val).split('/')[0], 10);
+      return Math.min(isNaN(n) ? 0 : n, max);
+    }
+
+    // Save final evaluation
+    const technicalKnowledge = extractAndCap(evaluation.TechnicalKnowledge, 40);
+    const problemSolvingSkills = extractAndCap(evaluation.ProblemSolvingSkills, 30);
+    const communicationSkills = extractAndCap(evaluation.CommunicationSkills, 30);
+    const overallScore = Math.min(technicalKnowledge + problemSolvingSkills + communicationSkills, 100);
+    const feedback = evaluation.feedBack || "No feedback";
+    const updatedScore = {
+      ...interview.score,
+      finalEvaluation: {
+        technicalKnowledge,
+        problemSolvingSkills,
+        communicationSkills,
+        overallScore,
+        feedback
+      }
+    };
+    await Interview.findByIdAndUpdate(interview._id, { score: updatedScore }, { new: true });
+   
+
+    res.status(200).json({
+      success: true,
+      feedback,
+      overallScore,
+      interviewId: interview._id,
+      finalEvaluation: {
+        technicalKnowledge,
+        problemSolvingSkills,
+        communicationSkills,
+        overallScore,
+        feedback
+      }
+    });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ success: false, error: "Internal server error" });
+  }
+};
