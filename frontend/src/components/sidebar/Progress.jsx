@@ -107,6 +107,51 @@ export default function Progress() {
                       </div>
                     )}
                   </>
+                ) : interview.interview_type === 'HR' ? (
+                  // HR Interview Score Display
+                  <>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {Object.entries(interview.score)
+                        .filter(([key]) => key.startsWith('question_'))
+                        .map(([key, value], idx) => (
+                          <div key={key} className="bg-base-200/50 p-1.5 rounded-lg flex flex-col items-center">
+                            <div className="text-[10px] text-base-content/60">Q{idx + 1}</div>
+                            <div className="text-sm font-bold text-base-content">{value.score}</div>
+                          </div>
+                        ))}
+                    </div>
+                    {interview.score.finalEvaluation && (
+                      <div className="bg-primary/5 p-2 rounded-lg mt-2">
+                        <div className="text-xs font-semibold text-primary mb-1">Final Evaluation</div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <div className="text-xs text-base-content/70">Communication Skills</div>
+                            <div className="text-base font-bold text-primary">
+                              {interview.score.finalEvaluation.communicationSkills}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-base-content/70">Personality Fit</div>
+                            <div className="text-base font-bold text-primary">
+                              {interview.score.finalEvaluation.personalityFit}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-base-content/70">Relevance</div>
+                            <div className="text-base font-bold text-primary">
+                              {interview.score.finalEvaluation.relevance}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-base-content/70">Overall Score</div>
+                            <div className="text-base font-bold text-primary">
+                              {interview.score.finalEvaluation.overallScore}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 ) : (
                   // Other Interview Types Score Display
                   <div className="grid grid-cols-2 gap-1.5">
@@ -218,6 +263,52 @@ export default function Progress() {
                         <div className="text-sm text-base-content/70">Communication Skills</div>
                         <div className="text-xl font-bold text-primary">
                           {interview.score.finalEvaluation.communicationSkills}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-base-content/70">Overall Score</div>
+                        <div className="text-xl font-bold text-primary">
+                          {interview.score.finalEvaluation.overallScore}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : interview.interview_type === 'HR' ? (
+              // HR Interview Details
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(interview.score)
+                    .filter(([key]) => key.startsWith('question_'))
+                    .map(([key, value], idx) => (
+                      <div key={key} className="bg-base-200 p-4 rounded-xl flex flex-col items-center">
+                        <div className="text-xs text-base-content/60 mb-1">Q{idx + 1}</div>
+                        <div className="text-xl font-bold text-primary">{value.score}</div>
+                      </div>
+                    ))}
+                </div>
+                {/* Final Evaluation (only the required fields) */}
+                {interview.score.finalEvaluation && (
+                  <div className="bg-primary/5 p-4 rounded-xl mt-4">
+                    <h4 className="font-semibold text-primary mb-3">Final Evaluation</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <div className="text-sm text-base-content/70">Communication Skills</div>
+                        <div className="text-xl font-bold text-primary">
+                          {interview.score.finalEvaluation.communicationSkills}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-base-content/70">Personality Fit</div>
+                        <div className="text-xl font-bold text-primary">
+                          {interview.score.finalEvaluation.personalityFit}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-base-content/70">Relevance</div>
+                        <div className="text-xl font-bold text-primary">
+                          {interview.score.finalEvaluation.relevance}
                         </div>
                       </div>
                       <div>

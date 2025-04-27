@@ -24,7 +24,7 @@ export default function Feedback() {
       });
       const interviewsWithFeedback = response.data.interviews.filter(
         interview => {
-          if (interview.interview_type === 'TECHNICAL') {
+          if (interview.interview_type === 'TECHNICAL' || interview.interview_type === 'HR') {
             return interview.score && interview.score.finalEvaluation;
           }
           return interview.score && interview.score.feedBack;
@@ -125,6 +125,33 @@ export default function Feedback() {
           {interview.interview_type === 'TECHNICAL' ? (
             <div className="space-y-6">
               {/* Questions and Answers with Feedback */}
+              {Object.entries(interview.score)
+                .filter(([key]) => key.startsWith('question_'))
+                .map(([key, value]) => (
+                  <div key={key} className="bg-base-200 p-4 rounded-xl">
+                    <h4 className="font-semibold text-primary mb-2">Question {key.split('_')[1]}</h4>
+                    <p className="text-base-content/90 mb-3">{value.question}</p>
+                    <p className="text-base-content/80 mb-2">
+                      <span className="font-medium">Response:</span> {value.response}
+                    </p>
+                    <div className="text-sm mt-1">
+                      <span className="font-medium">Feedback:</span> {value.feedback}
+                    </div>
+                  </div>
+                ))}
+              {/* Final Feedback */}
+              {interview.score.finalEvaluation && (
+                <div className="p-5 bg-primary/5 rounded-xl">
+                  <h4 className="font-semibold text-primary mb-3">Final Feedback</h4>
+                  <p className="text-base-content/90 whitespace-pre-wrap leading-relaxed">
+                    {interview.score.finalEvaluation.feedback}
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : interview.interview_type === 'HR' ? (
+            <div className="space-y-6">
+              {/* HR Questions and Answers with Feedback */}
               {Object.entries(interview.score)
                 .filter(([key]) => key.startsWith('question_'))
                 .map(([key, value]) => (
