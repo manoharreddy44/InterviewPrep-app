@@ -11,6 +11,7 @@ export default function Progress() {
   const [interviews, setInterviews] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedInterview, setSelectedInterview] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchInterviews();
@@ -28,6 +29,21 @@ export default function Progress() {
       console.error('Error fetching interviews:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const deleteInterview = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this interview? This action cannot be undone.')) return;
+    try {
+      setDeleting(true);
+      await axios.delete(`/api/interview/${id}`);
+      setSelectedInterview(null);
+      fetchInterviews();
+    } catch (error) {
+      alert('Failed to delete interview.');
+      console.error('Delete error:', error);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -219,12 +235,21 @@ export default function Progress() {
               {interview.topic || 'Technical Interview'}
             </h2>
           </div>
-          <button
-            onClick={onClose}
-            className="btn btn-ghost btn-sm btn-circle hover:bg-base-200"
-          >
-            ✕
-          </button>
+          <div className="flex gap-2 items-center">
+            <button
+              onClick={() => deleteInterview(interview._id)}
+              className="btn btn-error btn-sm"
+              disabled={deleting}
+            >
+              {deleting ? 'Deleting...' : 'Delete'}
+            </button>
+            <button
+              onClick={onClose}
+              className="btn btn-ghost btn-sm btn-circle hover:bg-base-200"
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         <div className="space-y-4">
