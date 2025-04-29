@@ -6,9 +6,11 @@ import connectToMongoDB from './db/connectToMongoDB.js';
 import userRoutes from './routes/user.routes.js';
 import interviewRoutes from './routes/interview.routes.js';
 import reportRoutes from './routes/report.routes.js';
+import path from 'path';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const __dirname = path.resolve();
 
 dotenv.config();
 
@@ -21,6 +23,12 @@ app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/interview', interviewRoutes);
 app.use('/api/report', reportRoutes)
+
+app.use(express.static(path.join(__dirname, "/frontend/dist")));
+
+app.get('/*', (req, res) => {
+  res.sendFile(path.join(__dirname, "frontend", "dist", "index.html"));
+});
 
 app.listen(PORT, () => {
   connectToMongoDB();
