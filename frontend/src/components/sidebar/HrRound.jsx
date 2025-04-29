@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { useAuthContext } from '../../context/AuthContext';
@@ -22,6 +22,247 @@ export default function HrRound() {
   const [loading, setLoading] = useState(false);
   const [finalEvaluation, setFinalEvaluation] = useState(null);
   const [step, setStep] = useState('form'); // form, question, feedback, final
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [recognitionInstance, setRecognitionInstance] = useState(null);
+  const [showCamera, setShowCamera] = useState(false);
+  
+  // Refs to maintain state between recognition events
+  const finalTextRef = useRef('');
+  const interimTextRef = useRef('');
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+
+  // Function to speak text using the Web Speech API
+  const speakText = (text) => {
+    // Check if SpeechSynthesis is supported
+    if ('speechSynthesis' in window) {
+      // Create a new SpeechSynthesisUtterance instance
+      const utterance = new SpeechSynthesisUtterance(text);
+      
+      // Set speaking state to true when speech starts
+      utterance.onstart = () => setIsSpeaking(true);
+      
+      // Set speaking state to false when speech ends
+      utterance.onend = () => setIsSpeaking(false);
+      
+      // Cancel any ongoing speech
+      window.speechSynthesis.cancel();
+      
+      // Speak the text
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+  
+  // Start webcam
+  const startCamera = async () => {
+    try {
+      // Stop any existing stream
+      if (streamRef.current) {
+        stopCamera();
+      }
+      
+      // Get webcam stream with more permissive constraints
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: true, 
+        audio: false 
+      });
+      
+      // Save stream reference
+      streamRef.current = stream;
+      
+      // Connect stream to video element
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        
+        // Make sure video plays when ready
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current.play().catch(e => console.error("Error playing video:", e));
+        };
+      }
+      
+      setShowCamera(true);
+    } catch (err) {
+      console.error("Error accessing webcam:", err);
+      // Continue with speech recognition even if camera fails
+    }
+  };
+  
+  // Stop webcam
+  const stopCamera = () => {
+    if (streamRef.current) {
+      // Stop all tracks in the stream
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+      
+      // Clear video source
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+      
+      setShowCamera(false);
+    }
+  };
+  
+  // Initialize speech recognition
+  useEffect(() => {
+    // Check if browser supports SpeechRecognition
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      
+      // Configure recognition
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+      
+      // Set up event handlers
+      recognition.onstart = () => {
+        setIsListening(true);
+        
+        // Start camera when recognition starts
+        startCamera();
+        
+        // Remember current state when starting
+        finalTextRef.current = response;
+        interimTextRef.current = '';
+      };
+      
+      recognition.onend = () => {
+        setIsListening(false);
+        // Stop camera when recognition ends
+        stopCamera();
+        
+        // If recognition ends unexpectedly, restart it if still in listening state
+        if (isListening) {
+          try {
+            setTimeout(() => {
+              if (isListening) {
+                recognition.start();
+              }
+            }, 500);
+          } catch (e) {
+            console.error("Failed to restart recognition", e);
+          }
+        }
+      };
+      
+      recognition.onresult = (event) => {
+        let interimTranscript = '';
+        let finalTranscript = '';
+        
+        // Process all results
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript + ' ';
+          } else {
+            interimTranscript += transcript;
+          }
+        }
+        
+        // If we have final text, add it to our accumulated final text
+        if (finalTranscript) {
+          finalTextRef.current += finalTranscript;
+        }
+        
+        // Store the current interim text
+        interimTextRef.current = interimTranscript;
+        
+        // Update the response with both final and interim text
+        setResponse(finalTextRef.current + interimTextRef.current);
+      };
+      
+      recognition.onerror = (event) => {
+        console.error('Speech recognition error', event.error);
+        
+        // Only stop listening if it's a fatal error
+        if (event.error !== 'no-speech') {
+          setIsListening(false);
+          // Stop camera on error
+          stopCamera();
+        }
+      };
+      
+      setRecognitionInstance(recognition);
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      if (recognitionInstance) {
+        recognitionInstance.stop();
+      }
+      stopCamera();
+    };
+  }, []);
+  
+  // Toggle speech recognition
+  const toggleListening = () => {
+    if (!recognitionInstance) return;
+    
+    if (isListening) {
+      recognitionInstance.stop();
+      
+      // Save any remaining interim text as final text
+      if (interimTextRef.current) {
+        const completeText = finalTextRef.current + interimTextRef.current;
+        finalTextRef.current = completeText;
+        interimTextRef.current = '';
+        setResponse(completeText);
+      }
+      
+      // Stop camera
+      stopCamera();
+    } else {
+      // Start with current text in the input field
+      finalTextRef.current = response;
+      interimTextRef.current = '';
+      
+      // Start recognition
+      recognitionInstance.start();
+      // Camera will be started in the onstart handler
+    }
+  };
+  
+  // Speak question when it changes and we're in question step
+  useEffect(() => {
+    if (currentQuestion && step === 'question') {
+      speakText(currentQuestion);
+    }
+    
+    // Cleanup function to stop speech when component unmounts
+    return () => {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, [currentQuestion, step]);
+  
+  // Initialize video ref and play when component mounts
+  useEffect(() => {
+    // This will ensure the video element is properly referenced
+    if (videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+      videoRef.current.play().catch(e => console.error("Error playing video:", e));
+    }
+  }, [showCamera]);
+  
+  // Clean up resources when component unmounts
+  useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, []);
+
+  // Handle manual text input changes
+  const handleResponseChange = (e) => {
+    setResponse(e.target.value);
+    if (!isListening) {
+      finalTextRef.current = e.target.value;
+    }
+  };
 
   // Step 1: Form submit handler
   const handleStart = async (e) => {
@@ -36,6 +277,8 @@ export default function HrRound() {
       setCurrentQuestion(res.data.question);
       setQuestionKey(res.data.questionKey);
       setResponse('');
+      finalTextRef.current = '';
+      interimTextRef.current = '';
       setQuestionScore(null);
       setQuestionFeedback('');
       setStep('question');
@@ -49,11 +292,20 @@ export default function HrRound() {
   // Step 2: Submit response for current question
   const submitResponse = async () => {
     if (!response.trim()) return;
+    
+    // Stop listening if active
+    if (isListening && recognitionInstance) {
+      recognitionInstance.stop();
+    }
+    
+    // Make sure we capture any interim text
+    const finalResponse = response;
+    
     setLoading(true);
     try {
       const res = await axios.post('/api/interview/hr/submit', {
         interviewId,
-        response,
+        response: finalResponse,
       });
       setQuestionScore(res.data.currentQuestionScore);
       setQuestionFeedback(res.data.feedback);
@@ -61,7 +313,7 @@ export default function HrRound() {
         ...prev,
         {
           question: res.data.question,
-          response,
+          response: finalResponse,
           score: res.data.currentQuestionScore,
           feedback: res.data.feedback,
           communicationSkills: res.data.communicationSkills,
@@ -89,6 +341,8 @@ export default function HrRound() {
       setCurrentQuestion(res.data.question);
       setQuestionKey(res.data.questionKey);
       setResponse('');
+      finalTextRef.current = '';
+      interimTextRef.current = '';
       setQuestionScore(null);
       setQuestionFeedback('');
       setStep('question');
@@ -195,18 +449,92 @@ export default function HrRound() {
           <div className="mb-4">
             <div className="text-base font-semibold mb-2 text-base-content/80">Question:</div>
             <div className="bg-base-200 p-3 rounded mb-2">{currentQuestion}</div>
+            <div className="flex justify-end">
+              <button 
+                className="btn btn-sm btn-ghost" 
+                onClick={() => speakText(currentQuestion)}
+                disabled={isSpeaking}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                </svg>
+                {isSpeaking ? 'Speaking...' : 'Listen'}
+              </button>
+            </div>
           </div>
-          <textarea
-            className="textarea textarea-bordered w-full mb-3"
-            rows={4}
-            placeholder="Type your response..."
-            value={response}
-            onChange={e => setResponse(e.target.value)}
-            disabled={loading}
-          />
-          <button className="btn btn-primary" onClick={submitResponse} disabled={loading || !response.trim()}>
-            {loading ? 'Submitting...' : 'Submit Response'}
-          </button>
+          
+          {/* Webcam display */}
+          {showCamera && (
+            <div className="mb-4 flex justify-center">
+              <div className="relative border-2 border-primary rounded overflow-hidden bg-black" style={{ width: 320, height: 240 }}>
+                <video 
+                  ref={videoRef} 
+                  autoPlay={true}
+                  playsInline={true}
+                  muted={true}
+                  width="320"
+                  height="240"
+                  style={{width: '100%', height: '100%', objectFit: 'cover'}}
+                />
+                <div className="absolute top-2 right-2 bg-error text-white px-2 py-1 text-xs rounded-full animate-pulse">
+                  ● REC
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-medium text-base-content/80">Your Response:</label>
+              <button 
+                className={`btn btn-sm ${isListening ? 'btn-error' : 'btn-primary'}`}
+                onClick={toggleListening}
+                disabled={!recognitionInstance}
+              >
+                {isListening ? (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                    </svg>
+                    Stop Recording
+                  </>
+                ) : (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                    </svg>
+                    Start Recording
+                  </>
+                )}
+              </button>
+            </div>
+            <textarea
+              className="textarea textarea-bordered w-full"
+              rows={4}
+              placeholder="Type your response or click 'Start Recording' to speak..."
+              value={response}
+              onChange={handleResponseChange}
+              disabled={loading}
+            />
+            
+            {isListening && (
+              <div className="mt-2 text-sm text-primary animate-pulse flex items-center">
+                <span className="mr-2">🎤</span> 
+                <span>Listening... speak clearly</span>
+              </div>
+            )}
+          </div>
+          
+          <div className="flex justify-end">
+            <button 
+              className="btn btn-primary" 
+              onClick={submitResponse} 
+              disabled={loading || !response.trim()}
+            >
+              {loading ? 'Submitting...' : 'Submit Response'}
+            </button>
+          </div>
         </div>
       )}
       {step === 'feedback' && (
