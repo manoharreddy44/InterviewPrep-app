@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { Link } from 'react-router-dom';
+import { useAuthContext } from '../../context/AuthContext';
 
 export default function TechnicalRound() {
+  const { authUser } = useAuthContext();
+  const isDemo = authUser?.username === 'demo';
+  
   // Step 1: Collect job details
   const [jobRole, setJobRole] = useState('');
   const [experience, setExperience] = useState('');
@@ -125,6 +130,46 @@ export default function TechnicalRound() {
   return (
     <div className="max-w-xl mx-auto p-6 bg-base-100 rounded-xl shadow">
       <h2 className="text-2xl font-bold mb-4 text-primary">Technical Interview Round</h2>
+      
+      {/* Resume Requirement Notice - Hidden for demo users and after form step */}
+      {!isDemo && step === 'form' && (
+        <div className="bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border border-blue-200/20 rounded-lg p-4 mb-6">
+          <div className="flex items-start space-x-3">
+            <div className="flex-shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-blue-600 mb-1">Resume Required</h3>
+              <p className="text-base-content/80">Before starting the technical interview, please ensure you have:</p>
+              <ul className="mt-2 space-y-1 text-base-content/70">
+                <li className="flex items-center">
+                  <svg className="h-4 w-4 text-blue-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Uploaded your latest resume in the Profile section
+                </li>
+                <li className="flex items-center">
+                  <svg className="h-4 w-4 text-blue-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Verified that all information is up to date
+                </li>
+              </ul>
+              <div className="mt-3">
+                <Link to="/dashboard/profile" className="inline-flex items-center text-sm text-blue-600 hover:text-blue-700 font-medium">
+                  Go to Profile
+                  <svg className="ml-1 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {step === 'form' && (
         <form onSubmit={handleStart} className="space-y-4">
           <div>
