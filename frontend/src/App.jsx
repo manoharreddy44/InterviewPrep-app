@@ -9,6 +9,7 @@ import Profile from './components/sidebar/Profile'
 import Analytics from './components/sidebar/Analytics'
 import Login from './pages/login/Login'
 import SignUp from './pages/signup/SignUp'
+import LandingPage from './pages/landing/LandingPage'
 import { Toaster } from 'react-hot-toast'
 import { useAuthContext } from './context/AuthContext'
 
@@ -17,10 +18,14 @@ function App() {
   return (
     <div>
       <Routes>
-        <Route path="/login" element={authUser ? <Navigate to='/' /> : <Login />} />
-        <Route path="/signup" element={authUser ? <Navigate to='/' /> : <SignUp />} />
+        {/* Public Routes */}
+        <Route path="/" element={authUser ? <Navigate to="/dashboard" /> : <LandingPage />} />
+        <Route path="/login" element={authUser ? <Navigate to="/dashboard" /> : <Login />} />
+        <Route path="/signup" element={authUser ? <Navigate to="/dashboard" /> : <SignUp />} />
 
-        <Route path="/" element={authUser ? <Home /> : <Navigate to='/login' />}>
+        {/* Protected Routes */}
+        <Route path="/dashboard" element={authUser ? <Home /> : <Navigate to="/login" />}>
+          <Route index element={<Navigate to="analytics" replace />} />
           <Route path="progress" element={<Progress />} />
           <Route path="technical-round" element={<TechnicalRound />} />
           <Route path="hr-round" element={<HrRound />} />
@@ -29,6 +34,9 @@ function App() {
           <Route path="profile" element={<Profile />} />
           <Route path="analytics" element={<Analytics />} />
         </Route>
+
+        {/* Catch all route */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <Toaster/>
     </div>

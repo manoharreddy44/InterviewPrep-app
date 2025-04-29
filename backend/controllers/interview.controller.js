@@ -4,10 +4,14 @@ import User from "../models/user.model.js";
 
 export const groupDiscussion = async (req, res) => {
   const prompt = `
-    Generate one trending group discussion topic mostly in the field of Information Technology.
-    The topic should be relevant for freshers.
-    It should be current, easy to understand, beginner-level job interviews.
-    Only return the topic in a single line without numbering or extra description.
+    Generate a trending group discussion topic for IT freshers focusing on current industry challenges.
+    Requirements:
+    1. Topic must be debatable with multiple perspectives
+    2. Should relate to emerging technologies (AI, Cybersecurity, Cloud Computing, etc.)
+    3. Must require critical thinking rather than factual knowledge
+    4. Phrase as a direct question (e.g., "Should...?", "How might...?")
+    5. Exclude common/pop culture topics
+    Format: Strictly one line, no quotes or numbering
   `;
 
   try {
@@ -64,26 +68,28 @@ export const evaluateResponse = async (req, res) => {
     }
 
     const evaluationPrompt = `
-You are an evaluation AI for group discussion responses.
-
-Evaluate the following based only on the given topic and response:
-
-Topic: "${topic}"
-
-Response: "${response}"
-
-Strictly follow these instructions:
-
-1. Compare if the response meaningfully addresses the topic. If the response simply repeats the topic without adding meaningful content, deduct marks.
-2. Evaluate based on:
-    - Relevance to the topic (10 marks)
-    - Clarity and structure (10 marks)
-    - Depth of thought (10 marks)
-    - Confidence and tone (10 marks)
-    - Grammar and fluency (10 marks)
-3. Provide an OverallScore out of 50 (sum of all scores).
-4. Feedback must be 2 to 3 clear sentences, mentioning specific areas of strength and weakness.
-5. If the response is very poor or just restates the topic, give low scores in Depth and Relevance.
+Strict Group Discussion Evaluation Rubric:
+    
+    Topic: "${topic}"
+    Response: "${response}"
+    
+    Scoring (0-10 per category):
+    1. Relevance: Direct connection to topic keywords and context
+    2. Depth: Demonstration of layered thinking (cost-benefit, ethics, future implications)
+    3. Structure: Clear logic flow (thesis-support-conclusion)
+    4. Engagement: Ability to invite discussion (questions raised, counter-arguments addressed)
+    5. Language: Professional vocabulary without jargon
+    
+    Deductions:
+    - -3 for generic statements ("Technology is important")
+    - -5 for factual errors
+    - -2 per instance of off-topic content
+    
+    Final Requirements:
+    - Total score out of 50
+    - 3-part feedback: Strength, Weakness, Improvement
+    - Specific examples from response
+    - No generic advice
 
 Return ONLY valid JSON in this exact format:
 {
@@ -181,11 +187,13 @@ export const generateTechnicalQuestion = async (req, res) => {
       - Candidate Resume: ${resume}
 
       Rules:
-      1. If the previous score is above 70, slightly increase the difficulty by asking a deeper or real-world scenario-based question.
-      2. The question must be strictly relevant to the job role, experience, and skills mentioned in the resume.
-      3. The question should test practical knowledge, problem-solving ability, and real-world application.
-      4. Return ONLY the question in a **single line** without any explanation or additional text.
-      `;
+      1. If the previous score is above 70, slightly increase the difficulty by asking a deeper, real-world scenario-based, or multi-step problem question.
+      2. If the previous score is below 40, slightly reduce the difficulty by asking a simpler, fundamental-level technical question to rebuild the candidate's confidence.
+      3. If the previous score is between 40 and 70 (inclusive), maintain the current difficulty level with a balanced technical question.
+      4. The question must be strictly relevant to the job role, experience level, and skills mentioned in the resume.
+      5. The question should test practical knowledge, problem-solving ability, and real-world application.
+      6. Return ONLY the question in a **single line** without any explanation or additional text.
+    `;
 
     const response = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
@@ -453,18 +461,19 @@ export const generateHrQuestion = async (req, res) => {
     return res.status(400).json({ success: false, error: "Resume not found for the user" });
   }
   try {
-    const prompt = `
-      Generate an HR interview question based on the following details:
-      - Job Role: ${jobRole}
-      - Experience Level: ${experience}
-      - Candidate Resume: ${resume}
-      - Previous Question Score: ${previousQuestionScore || "N/A"}
-      Rules:
-      1. If the previous score is above 70, slightly increase the complexity of the question to assess deeper personality traits or cultural fit.
-      2. The question should assess the candidate's personality, communication skills, and cultural fit.
-      3. The question must be relevant to the job role, experience level, and skills mentioned in the resume.
-      4. Return ONLY the question in a **single line** without any explanation or additional text.
-    `;
+    const prompt = `Generate an HR interview question based on the following details:
+    - Job Role: ${jobRole}
+    - Experience Level: ${experience}
+    - Candidate Resume: ${resume}
+    - Previous Question Score: ${previousQuestionScore || "N/A"}
+    
+    Rules:
+    1. If the previous score is above 70, slightly increase the complexity of the question to assess deeper personality traits or cultural fit.
+    2. If the previous score is below 40, simplify the question slightly to rebuild the candidate's confidence while still assessing personality, communication skills, and cultural fit.
+    3. If the previous score is between 40 and 70 (inclusive), keep the difficulty level similar to maintain steady progress.
+    4. The question should always be relevant to the job role, experience level, and skills mentioned in the resume.
+    5. Return ONLY the question in a **single line** without any explanation or additional text.
+  `;
     const response = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [{ role: "user", content: prompt }],
@@ -685,4 +694,24 @@ export const evaluateHrResponse = async (req, res) => {
   }
 };
 
+// Delete an interview by ID
+export const deleteInterview = async (req, res) => {
+  try {
+    const interviewId = req.params.id;
+    const userId = req.user._id;
+    const interview = await Interview.findById(interviewId);
+    if (!interview) {
+      return res.status(404).json({ success: false, error: "Interview not found" });
+    }
+    // Only allow the owner to delete their interview
+    if (String(interview.user_id) !== String(userId)) {
+      return res.status(403).json({ success: false, error: "Not authorized to delete this interview" });
+    }
+    await Interview.findByIdAndDelete(interviewId);
+    res.status(200).json({ success: true, message: "Interview deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting interview:", error);
+    res.status(500).json({ success: false, error: "Internal server error" });
+  }
+};
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import useLogin from '../../hooks/useLogin'
 
 export default function Login() {
@@ -9,6 +9,18 @@ export default function Login() {
   });
   const { loading, login } = useLogin();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isDemo = location.state?.demo;
+
+  // Auto-fill demo credentials if coming from demo button
+  React.useEffect(() => {
+    if (isDemo) {
+      setInputs({
+        username: 'demo',
+        password: '1234'
+      });
+    }
+  }, [isDemo]);
 
   const handleChange = (e) => {
     setInputs((prev) => ({
@@ -20,7 +32,7 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     await login(inputs.username, inputs.password);
-    navigate('/');
+    navigate('/login');
   };
 
   return (
@@ -40,6 +52,16 @@ export default function Login() {
             </svg>
             <span className="text-xs">Powered by AI</span>
           </div>
+        </div>
+
+        {/* Demo Credentials */}
+        <div className="mb-6 p-3 rounded-lg bg-[#F3F0FF] text-center">
+          <p className="text-sm">
+            <span className="text-gray-600">Username: </span>
+            <span className="text-[#7C3AED]">demo</span>
+            <span className="text-gray-600"> / Pass: </span>
+            <span className="text-[#7C3AED]">1234</span>
+          </p>
         </div>
 
         {/* Form */}

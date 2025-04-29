@@ -1,5 +1,5 @@
 import express from 'express';
-import { groupDiscussion, evaluateResponse, generateTechnicalQuestion, submitTechnicalResponse, evaluateTechnicalResponse, generateHrQuestion, submitHrResponse, evaluateHrResponse } from '../controllers/interview.controller.js';
+import { groupDiscussion, evaluateResponse, generateTechnicalQuestion, submitTechnicalResponse, evaluateTechnicalResponse, generateHrQuestion, submitHrResponse, evaluateHrResponse, deleteInterview } from '../controllers/interview.controller.js';
 import { protectRoute } from '../middleware/protectRoute.js';
 
 const router = express.Router();
@@ -17,5 +17,8 @@ router.post('/technical/evaluate', protectRoute, evaluateTechnicalResponse);
 router.post('/hr/question', protectRoute, generateHrQuestion);
 router.post('/hr/submit', protectRoute, submitHrResponse);
 router.post('/hr/evaluate', protectRoute, evaluateHrResponse);
+
+// Add this route for deleting an interview
+router.delete('/:id', protectRoute, deleteInterview);
 
 export default router;
