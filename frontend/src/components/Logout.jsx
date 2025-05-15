@@ -17,7 +17,7 @@ export default function Logout() {
       <button 
         onClick={handleLogout}
         disabled={loading}
-        className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-primary text-primary-content rounded-btn hover:bg-primary-focus transition-colors duration-200"
+        className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-primary text-primary-content rounded-btn hover:bg-primary-focus transition-colors duration-200 shadow-md"
       >
         {loading ? (
           <span className="loading loading-spinner loading-sm"></span>

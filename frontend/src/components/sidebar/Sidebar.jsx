@@ -1,5 +1,6 @@
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import Logout from '../Logout'
+import { X } from 'lucide-react'
 
 const sidebarItems = [
   {
@@ -67,9 +68,32 @@ const sidebarItems = [
   }
 ]
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen, onClose }) {
+  const location = useLocation();
+  
+  // Sidebar classes that change based on device/state
+  const sidebarClasses = `
+    fixed top-0 left-0 h-screen z-40 transition-transform duration-300 ease-in-out
+    bg-base-300 shadow-lg overflow-y-auto
+    ${isOpen ? 'translate-x-0' : '-translate-x-full'} 
+    md:translate-x-0 w-64 
+  `;
+
+  // Check if a path is active
+  const isActive = (path) => {
+    return location.pathname.includes(path);
+  };
+
   return (
-    <div className="fixed top-0 left-0 h-screen w-64 bg-base-300 shadow-lg">
+    <div className={sidebarClasses}>
+      {/* Close button - only on mobile */}
+      <button 
+        onClick={onClose}
+        className="md:hidden absolute top-4 right-4 p-1 rounded-full hover:bg-base-100"
+      >
+        <X size={20} />
+      </button>
+
       {/* Logo */}
       <div className="px-6 py-6">
         <h1 className="text-2xl font-bold">
@@ -79,15 +103,18 @@ export default function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="px-3">
+      <nav className="px-3 mb-20">
         <ul className="space-y-1">
           {sidebarItems.map((item) => (
             <li key={item.path}>
               <Link
                 to={item.path}
-                className="flex items-center gap-3 px-3 py-2 rounded-btn hover:bg-base-100 transition-colors duration-200"
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-base-100 transition-colors duration-200 ${
+                  isActive(item.path) ? 'bg-primary text-primary-content' : ''
+                }`}
+                onClick={() => window.innerWidth < 768 && onClose()} // Close sidebar on mobile after navigation
               >
-                <span className="text-primary">{item.icon}</span>
+                <span className={isActive(item.path) ? 'text-white' : 'text-primary'}>{item.icon}</span>
                 <span>{item.label}</span>
               </Link>
             </li>

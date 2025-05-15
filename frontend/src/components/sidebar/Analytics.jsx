@@ -13,7 +13,7 @@ import {
   Legend,
   RadialLinearScale
 } from 'chart.js';
-import { Line, Radar, Bar, Doughnut } from 'react-chartjs-2';
+import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 
 // Register ChartJS components
@@ -51,10 +51,6 @@ export default function Analytics() {
     try {
       const response = await axios.post('/api/report', {});
       setAllInterviews(response.data.interviews || []);
-      console.log('allInterviews:', response.data.interviews);
-      if (response.data.interviews) {
-        console.log('interview_type values:', response.data.interviews.map(i => i.interview_type));
-      }
     } catch (error) {
       console.error('Error fetching all interviews:', error);
     }
@@ -71,8 +67,12 @@ export default function Analytics() {
       // Get last 5 interviews (or all if less than 5)
       const recent = allInterviews.slice(0, 5);
       setRecentInterviews(recent);
-      // Get the latest interview (last in the array)
-      calculateCurrentScores(recent[recent.length - 1]);
+      // Get the latest interview
+      if (recent.length > 0) {
+        calculateCurrentScores(recent[0]);
+      } else {
+        setCurrentScores({});
+      }
     } catch (error) {
       console.error('Error fetching interviews:', error);
     } finally {
@@ -119,7 +119,7 @@ export default function Analytics() {
       : interview.score?.finalEvaluation?.overallScore || 0
   );
 
-  // Get skill data for radar chart (latest and previous)
+  // Get skill data for charts
   const getSkillData = (interview) => {
     if (!interview) return { labels: [], data: [] };
     if (selectedType === 'TECHNICAL') {
@@ -155,9 +155,9 @@ export default function Analytics() {
   };
 
   // Prepare radar chart data
-  const latestIdx = recentInterviews.length - 1;
-  const prevIdx = recentInterviews.length - 2;
-  const latestSkill = getSkillData(recentInterviews[latestIdx]);
+  const latestIdx = recentInterviews.length > 0 ? 0 : -1;
+  const prevIdx = recentInterviews.length > 1 ? 1 : -1;
+  const latestSkill = latestIdx >= 0 ? getSkillData(recentInterviews[latestIdx]) : { labels: [], data: [] };
   const prevSkill = prevIdx >= 0 ? getSkillData(recentInterviews[prevIdx]) : null;
 
   // Prepare grouped bar chart data for skills
@@ -215,13 +215,13 @@ export default function Analytics() {
     },
     scales: {
       x: {
-        grid: { color: '#444' },
+        grid: { color: 'rgba(255,255,255,0.1)' },
         ticks: { color: '#fff', font: { size: 15, weight: 'bold' }, display: true }
       },
       y: {
         beginAtZero: true,
         max: selectedType === 'GD' ? 10 : 100,
-        grid: { color: '#444' },
+        grid: { color: 'rgba(255,255,255,0.1)' },
         ticks: { color: '#fff', display: true }
       }
     }
@@ -311,13 +311,13 @@ export default function Analytics() {
     },
     scales: {
       x: {
-        grid: { color: '#444' },
+        grid: { color: 'rgba(255,255,255,0.1)' },
         ticks: { color: '#fff', font: { size: 15, weight: 'bold' }, display: true }
       },
       y: {
         beginAtZero: true,
         max: selectedType === 'GD' ? 10 : 100,
-        grid: { color: '#444' },
+        grid: { color: 'rgba(255,255,255,0.1)' },
         ticks: { color: '#fff', display: true }
       }
     }
@@ -427,7 +427,7 @@ export default function Analytics() {
             {/* Charts Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Progress Chart */}
-              <div className="bg-base-100 rounded-2xl shadow-2xl p-8 my-8 flex flex-col items-center">
+              <div className="bg-chart-bg rounded-2xl shadow-2xl p-8 my-8 flex flex-col items-center">
                 <h3 className="text-lg font-semibold mb-4 text-base-content">Interview Progression (Last 5 Interviews)</h3>
                 <div className="h-[420px] w-full max-w-xl flex items-center justify-center">
                   <Line
@@ -454,11 +454,11 @@ export default function Analytics() {
                         y: {
                           beginAtZero: true,
                           max: 100,
-                          grid: { color: '#444' },
+                          grid: { color: 'rgba(255,255,255,0.1)' },
                           ticks: { color: '#fff', display: true }
                         },
                         x: {
-                          grid: { color: '#444' },
+                          grid: { color: 'rgba(255,255,255,0.1)' },
                           ticks: { color: '#fff', display: true }
                         }
                       },
@@ -484,7 +484,7 @@ export default function Analytics() {
               </div>
 
               {/* Skill Distribution Chart (Bar) */}
-              <div className="bg-base-100 rounded-2xl shadow-2xl p-8 my-8 flex flex-col items-center">
+              <div className="bg-chart-bg rounded-2xl shadow-2xl p-8 my-8 flex flex-col items-center">
                 <h3 className="text-lg font-semibold mb-4 text-base-content">Skill Comparison (Latest vs Previous Interview)</h3>
                 <div className="h-[420px] w-full max-w-xl flex items-center justify-center">
                   <Bar
@@ -505,12 +505,12 @@ export default function Analytics() {
                         x: {
                           ...barOptions.scales.x,
                           ticks: { ...barOptions.scales.x.ticks, color: '#fff' },
-                          grid: { ...barOptions.scales.x.grid, color: '#444' }
+                          grid: { ...barOptions.scales.x.grid, color: 'rgba(255,255,255,0.1)' }
                         },
                         y: {
                           ...barOptions.scales.y,
                           ticks: { ...barOptions.scales.y.ticks, color: '#fff' },
-                          grid: { ...barOptions.scales.y.grid, color: '#444' }
+                          grid: { ...barOptions.scales.y.grid, color: 'rgba(255,255,255,0.1)' }
                         }
                       }
                     }}
@@ -522,7 +522,7 @@ export default function Analytics() {
             {/* Average Skill Bar Chart & Donut Chart Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* Average Skill Bar Chart */}
-              <div className="bg-base-100 rounded-2xl shadow-2xl p-8 my-8 flex flex-col items-center">
+              <div className="bg-chart-bg rounded-2xl shadow-2xl p-8 my-8 flex flex-col items-center">
                 <h3 className="text-lg font-semibold mb-4 text-base-content">Average Skill Scores (All Interviews)</h3>
                 <div className="h-[320px] w-full max-w-xl flex items-center justify-center">
                   <Bar
@@ -532,7 +532,7 @@ export default function Analytics() {
                 </div>
               </div>
               {/* Donut Chart */}
-              <div className="bg-base-100 rounded-2xl shadow-2xl p-8 my-8 flex flex-col items-center">
+              <div className="bg-chart-bg rounded-2xl shadow-2xl p-8 my-8 flex flex-col items-center">
                 <h3 className="text-lg font-semibold mb-4 text-base-content">Interview Type Ratio</h3>
                 <div className="h-[320px] w-full max-w-xs flex items-center justify-center">
                   {totalTypes === 0 ? (
