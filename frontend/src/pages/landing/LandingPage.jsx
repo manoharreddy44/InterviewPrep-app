@@ -150,99 +150,116 @@ const LandingPage = () => {
                 </div>
                 <div className="bg-[#1A1B23] rounded-lg sm:rounded-xl p-4 sm:p-6">
                   <div className="flex flex-col gap-4 sm:gap-6">
-                    <div className="grid grid-cols-3 gap-2 sm:gap-4">
+                    <div className="grid grid-cols-3 gap-6">
+                      {/* Technical Score */}
                       <div className="flex flex-col items-center">
-                        <div className="relative w-16 h-16 sm:w-24 sm:h-24">
-                          <svg className="w-16 h-16 sm:w-24 sm:h-24 transform -rotate-90">
+                        <div className="relative w-14 h-14 sm:w-20 sm:h-20">
+                          <svg viewBox="0 0 100 100" className="transform -rotate-90">
+                            {/* Background circle */}
                             <circle
-                              className="text-gray-700"
-                              strokeWidth="6"
-                              stroke="currentColor"
-                              fill="transparent"
-                              r="28"
-                              cx="32"
-                              cy="32"
+                              cx="50"
+                              cy="50"
+                              r="42"
+                              className="stroke-[#1E293B] stroke-[6] fill-none"
                             />
+                            {/* Progress circle */}
                             <circle
-                              className="text-[#6366F1]"
-                              strokeWidth="6"
-                              strokeDasharray={176}
-                              strokeDashoffset={176 - (176 * 37) / 40}
+                              cx="50"
+                              cy="50"
+                              r="42"
+                              className="stroke-[#6366F1] stroke-[6] fill-none"
                               strokeLinecap="round"
-                              stroke="currentColor"
-                              fill="transparent"
-                              r="28"
-                              cx="32"
-                              cy="32"
+                              strokeDasharray="264"
+                              strokeDashoffset={264 - (264 * 37) / 40}
+                              style={{ transition: "stroke-dashoffset 0.5s" }}
                             />
+                            {/* Score text */}
+                            <text
+                              x="50"
+                              y="50"
+                              className="fill-[#6366F1] text-2xl font-medium"
+                              dominantBaseline="middle"
+                              textAnchor="middle"
+                              transform="rotate(90 50 50)"
+                              style={{ fontSize: "16px" }}
+                            >
+                              37/40
+                            </text>
                           </svg>
-                          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                            <span className="text-[#6366F1] text-sm sm:text-xl font-medium">37/40</span>
-                          </div>
                         </div>
-                        <span className="text-gray-400 text-xs sm:text-sm mt-1 sm:mt-2">Technical</span>
+                        <span className="text-gray-400 text-xs mt-2">Technical</span>
                       </div>
+
+                      {/* Problem Solving Score */}
                       <div className="flex flex-col items-center">
-                        <div className="relative w-16 h-16 sm:w-24 sm:h-24">
-                          <svg className="w-16 h-16 sm:w-24 sm:h-24 transform -rotate-90">
+                        <div className="relative w-14 h-14 sm:w-20 sm:h-20">
+                          <svg viewBox="0 0 100 100" className="transform -rotate-90">
                             <circle
-                              className="text-gray-700"
-                              strokeWidth="6"
-                              stroke="currentColor"
-                              fill="transparent"
-                              r="28"
-                              cx="32"
-                              cy="32"
+                              cx="50"
+                              cy="50"
+                              r="42"
+                              className="stroke-[#1E293B] stroke-[6] fill-none"
                             />
                             <circle
-                              className="text-[#6366F1]"
-                              strokeWidth="6"
-                              strokeDasharray={176}
-                              strokeDashoffset={176 - (176 * 28) / 30}
+                              cx="50"
+                              cy="50"
+                              r="42"
+                              className="stroke-[#6366F1] stroke-[6] fill-none"
                               strokeLinecap="round"
-                              stroke="currentColor"
-                              fill="transparent"
-                              r="28"
-                              cx="32"
-                              cy="32"
+                              strokeDasharray="264"
+                              strokeDashoffset={264 - (264 * 28) / 30}
+                              style={{ transition: "stroke-dashoffset 0.5s" }}
                             />
+                            <text
+                              x="50"
+                              y="50"
+                              className="fill-[#6366F1] text-2xl font-medium"
+                              dominantBaseline="middle"
+                              textAnchor="middle"
+                              transform="rotate(90 50 50)"
+                              style={{ fontSize: "16px" }}
+                            >
+                              28/30
+                            </text>
                           </svg>
-                          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                            <span className="text-[#6366F1] text-sm sm:text-xl font-medium">28/30</span>
-                          </div>
                         </div>
-                        <span className="text-gray-400 text-xs sm:text-sm mt-1 sm:mt-2">Problem Solving</span>
+                        <span className="text-gray-400 text-xs mt-2">Problem Solving</span>
                       </div>
+
+                      {/* Communication Score */}
                       <div className="flex flex-col items-center">
-                        <div className="relative w-16 h-16 sm:w-24 sm:h-24">
-                          <svg className="w-16 h-16 sm:w-24 sm:h-24 transform -rotate-90">
+                        <div className="relative w-14 h-14 sm:w-20 sm:h-20">
+                          <svg viewBox="0 0 100 100" className="transform -rotate-90">
                             <circle
-                              className="text-gray-700"
-                              strokeWidth="6"
-                              stroke="currentColor"
-                              fill="transparent"
-                              r="28"
-                              cx="32"
-                              cy="32"
+                              cx="50"
+                              cy="50"
+                              r="42"
+                              className="stroke-[#1E293B] stroke-[6] fill-none"
                             />
                             <circle
-                              className="text-[#6366F1]"
-                              strokeWidth="6"
-                              strokeDasharray={176}
-                              strokeDashoffset={176 - (176 * 25) / 30}
+                              cx="50"
+                              cy="50"
+                              r="42"
+                              className="stroke-[#6366F1] stroke-[6] fill-none"
                               strokeLinecap="round"
-                              stroke="currentColor"
-                              fill="transparent"
-                              r="28"
-                              cx="32"
-                              cy="32"
+                              strokeDasharray="264"
+                              strokeDashoffset={264 - (264 * 25) / 30}
+                              style={{ transition: "stroke-dashoffset 0.5s" }}
                             />
+                            <text
+                              x="50"
+                              y="50"
+                              className="fill-[#6366F1] text-2xl font-medium"
+                              dominantBaseline="middle"
+                              textAnchor="middle"
+                              transform="rotate(90 50 50)"
+                              style={{ fontSize: "16px" }}
+                            >
+                              25/30
+                            </text>
                           </svg>
-                          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                            <span className="text-[#6366F1] text-sm sm:text-xl font-medium">25/30</span>
-                          </div>
                         </div>
-                        <span className="text-gray-400 text-xs sm:text-sm mt-1 sm:mt-2">Communication</span>
+                        <span className="text-gray-400 text-xs mt-2">Communication</span>
                       </div>
                     </div>
                     <div>
