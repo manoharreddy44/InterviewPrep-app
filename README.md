@@ -51,7 +51,7 @@ OPENAI_API_KEY=your_openai_api_key
 
 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/interview-app.git
+git clone https://github.com/manoharreddy44/InterviewPrep-app
 cd interview-app
 ```
 
@@ -129,9 +129,7 @@ npm start
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## 🙏 Acknowledgments
 
