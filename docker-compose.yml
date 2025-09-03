@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  mongo:
+    image: mongo:6
+    restart: always
+    container_name: interview-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend.Dockerfile
+    container_name: interview-backend
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - MONGO_DB_URI=${MONGO_DB_URI}
+      - JWT_SECRET=${JWT_SECRET}
+      - NODE_ENV=${NODE_ENV}
+      - PORT=${PORT}
+    depends_on:
+      - mongo
+    volumes:
+      - ./backend:/app/backend
+      - ./package.json:/app/package.json
+      - ./package-lock.json:/app/package-lock.json
+
+  frontend:
+    build: ./frontend
+    container_name: interview-frontend
+    restart: always
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  mongo-data:
