@@ -1,0 +1,37 @@
+name: CI - Docker Compose Build
+
+on:
+  push:
+    branches: [ "compose" ]   # ✅ Trigger only on compose branch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout repo
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Set up Docker
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # ✅ Build all services using docker-compose.yml
+      - name: Docker Compose Build
+        run: docker compose -f docker-compose.yml build
+
+      # ✅ Bonus: Run backend (root) tests if present
+      - name: Run root tests if present
+        run: |
+          if [ -f package.json ]; then
+            npm ci || npm install
+            npm run -s test --if-present
+          fi
+
+      # ✅ Bonus: Run frontend tests if present
+      - name: Run frontend tests if present
+        working-directory: frontend
+        run: |
+          if [ -f package.json ]; then
+            npm ci || npm install
+            npm run -s test --if-present
