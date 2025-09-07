@@ -35,3 +35,4 @@ jobs:
           if [ -f package.json ]; then
             npm ci || npm install
             npm run -s test --if-present
+          fi
