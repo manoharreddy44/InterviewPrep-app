@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   mongo:
     image: mongo:6
@@ -11,8 +9,8 @@ services:
       - mongo-data:/data/db
 
   backend:
-    image: manoharreddy123/interview-app-backend:latest   # ✅ Use pushed image
-    build:             # still allow building locally if needed
+    image: manoharreddy123/interview-app-backend   # ✅ use your Docker Hub image
+    build:
       context: .
       dockerfile: backend.Dockerfile
     container_name: interview-backend
@@ -20,11 +18,11 @@ services:
     ports:
       - "5000:5000"
     environment:
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-      MONGO_DB_URI: ${MONGO_DB_URI}
-      JWT_SECRET: ${JWT_SECRET}
-      NODE_ENV: ${NODE_ENV}
-      PORT: ${PORT}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - MONGO_DB_URI=${MONGO_DB_URI}
+      - JWT_SECRET=${JWT_SECRET}
+      - NODE_ENV=${NODE_ENV}
+      - PORT=${PORT}
     depends_on:
       - mongo
     volumes:
@@ -33,8 +31,9 @@ services:
       - ./package-lock.json:/app/package-lock.json
 
   frontend:
-    image: manoharreddy123/interview-app-frontend:latest   # ✅ Use pushed image
-    build: ./frontend    # still allow building locally if needed
+    image: manoharreddy123/interview-app-frontend   # ✅ use your Docker Hub image
+    build:
+      context: ./frontend
     container_name: interview-frontend
     restart: always
     ports:
