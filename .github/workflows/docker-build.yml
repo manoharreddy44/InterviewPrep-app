@@ -2,25 +2,21 @@ name: CI - Docker Compose Build & Push
 
 on:
   push:
-    branches: [ "compose" ]   # ✅ Trigger only on compose branch
+    branches: [ "compose" ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      # ✅ Checkout repo
+      # Checkout
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # ✅ Set up Docker
+      # Setup Docker Buildx
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # ✅ Build all services using docker-compose.yml
-      - name: Docker Compose Build
-        run: docker compose -f docker-compose.yml build frontend backend
-
-      # ✅ Run backend (root) tests if present
+      # Run tests (root)
       - name: Run root tests if present
         run: |
           if [ -f package.json ]; then
@@ -28,7 +24,7 @@ jobs:
             npm run -s test --if-present
           fi
 
-      # ✅ Run frontend tests if present
+      # Run frontend tests
       - name: Run frontend tests if present
         working-directory: frontend
         run: |
@@ -37,26 +33,26 @@ jobs:
             npm run -s test --if-present
           fi
 
-      # ✅ Log in to Docker Hub
+      # Login to Docker Hub
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # ✅ Tag & Push Docker images (latest + commit SHA)
-      - name: Tag & Push Docker images
+      # Build & Push
+      - name: Build & Push Docker images
         run: |
           IMAGE_TAG=${{ github.sha }}
 
-          # Frontend
-          docker tag interview-app-frontend ${{ secrets.DOCKERHUB_USERNAME }}/interview-app-frontend:latest
-          docker tag interview-app-frontend ${{ secrets.DOCKERHUB_USERNAME }}/interview-app-frontend:$IMAGE_TAG
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/interview-app-frontend:latest
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/interview-app-frontend:$IMAGE_TAG
+          # Build with docker-compose
+          docker compose -f docker-compose.yml build
 
-          # Backend
-          docker tag interview-app-backend ${{ secrets.DOCKERHUB_USERNAME }}/interview-app-backend:latest
-          docker tag interview-app-backend ${{ secrets.DOCKERHUB_USERNAME }}/interview-app-backend:$IMAGE_TAG
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/interview-app-backend:latest
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/interview-app-backend:$IMAGE_TAG
+          # Push both (latest + commit SHA)
+          docker push manoharreddy123/interview-app-frontend:latest || true
+          docker tag manoharreddy123/interview-app-frontend manoharreddy123/interview-app-frontend:$IMAGE_TAG
+          docker push manoharreddy123/interview-app-frontend:$IMAGE_TAG
+
+          docker push manoharreddy123/interview-app-backend:latest || true
+          docker tag manoharreddy123/interview-app-backend manoharreddy123/interview-app-backend:$IMAGE_TAG
+          docker push manoharreddy123/interview-app-backend:$IMAGE_TAG
