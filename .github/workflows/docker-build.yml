@@ -1,4 +1,4 @@
-name: CI - Docker Compose Build
+name: CI - Docker Compose Build & Push
 
 on:
   push:
@@ -8,19 +8,19 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      # Checkout repo
+      # ✅ Checkout repo
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Set up Docker
+      # ✅ Set up Docker
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       # ✅ Build all services using docker-compose.yml
       - name: Docker Compose Build
-        run: docker compose -f docker-compose.yml build
+        run: docker compose -f docker-compose.yml build frontend backend
 
-      # ✅ Bonus: Run backend (root) tests if present
+      # ✅ Run backend (root) tests if present
       - name: Run root tests if present
         run: |
           if [ -f package.json ]; then
@@ -28,7 +28,7 @@ jobs:
             npm run -s test --if-present
           fi
 
-      # ✅ Bonus: Run frontend tests if present
+      # ✅ Run frontend tests if present
       - name: Run frontend tests if present
         working-directory: frontend
         run: |
@@ -36,3 +36,27 @@ jobs:
             npm ci || npm install
             npm run -s test --if-present
           fi
+
+      # ✅ Log in to Docker Hub
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # ✅ Tag & Push Docker images (latest + commit SHA)
+      - name: Tag & Push Docker images
+        run: |
+          IMAGE_TAG=${{ github.sha }}
+
+          # Frontend
+          docker tag interview-app-frontend ${{ secrets.DOCKERHUB_USERNAME }}/interview-app-frontend:latest
+          docker tag interview-app-frontend ${{ secrets.DOCKERHUB_USERNAME }}/interview-app-frontend:$IMAGE_TAG
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/interview-app-frontend:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/interview-app-frontend:$IMAGE_TAG
+
+          # Backend
+          docker tag interview-app-backend ${{ secrets.DOCKERHUB_USERNAME }}/interview-app-backend:latest
+          docker tag interview-app-backend ${{ secrets.DOCKERHUB_USERNAME }}/interview-app-backend:$IMAGE_TAG
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/interview-app-backend:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/interview-app-backend:$IMAGE_TAG
