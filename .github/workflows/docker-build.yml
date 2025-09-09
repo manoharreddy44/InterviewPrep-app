@@ -1,12 +1,13 @@
-name: CI - Docker Build & Push
+name: CI - Docker Compose Build & Push
 
 on:
   push:
-    branches: [ "compose" ]   # Trigger only on compose branch
+    branches: [ "compose" ]   # Runs only when pushing to compose branch
 
 jobs:
-  build-and-push:
+  build:
     runs-on: ubuntu-latest
+
     steps:
       # Checkout repo
       - name: Checkout repository
@@ -16,23 +17,46 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # Login to Docker Hub
+      # Build all services using docker-compose.yml
+      - name: Docker Compose Build
+        run: docker compose -f docker-compose.yml build
+
+      # Optional: Run backend (root) tests if present
+      - name: Run root tests if present
+        run: |
+          if [ -f package.json ]; then
+            npm ci || npm install
+            npm run -s test --if-present
+          fi
+
+      # Optional: Run frontend tests if present
+      - name: Run frontend tests if present
+        working-directory: frontend
+        run: |
+          if [ -f package.json ]; then
+            npm ci || npm install
+            npm run -s test --if-present
+          fi
+
+      # Log in to Docker Hub
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Build and push backend
-      - name: Build and push Backend
-        run: |
-          docker build -t manoharreddy123/interview-app-backend:latest -t manoharreddy123/interview-app-backend:${{ github.sha }} -f backend.Dockerfile .
-          docker push manoharreddy123/interview-app-backend:latest
-          docker push manoharreddy123/interview-app-backend:${{ github.sha }}
+      # Push latest images defined in docker-compose.yml
+      - name: Docker Compose Push (latest)
+        run: docker compose -f docker-compose.yml push
 
-      # Build and push frontend
-      - name: Build and push Frontend
+      # Tag images with Git SHA and push
+      - name: Tag & Push versioned images (SHA)
         run: |
-          docker build -t manoharreddy123/interview-app-frontend:latest -t manoharreddy123/interview-app-frontend:${{ github.sha }} ./frontend
-          docker push manoharreddy123/interview-app-frontend:latest
-          docker push manoharreddy123/interview-app-frontend:${{ github.sha }}
+          GIT_SHA=${{ github.sha }}
+          # Ensure these image names match docker-compose.yml
+          BACKEND=manoharreddy123/interview-app-backend
+          FRONTEND=manoharreddy123/interview-app-frontend
+          docker tag $BACKEND:latest $BACKEND:${GIT_SHA}
+          docker tag $FRONTEND:latest $FRONTEND:${GIT_SHA}
+          docker push $BACKEND:${GIT_SHA}
+          docker push $FRONTEND:${GIT_SHA}
