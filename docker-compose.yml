@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   mongo:
     image: mongo:6
@@ -9,7 +11,7 @@ services:
       - mongo-data:/data/db
 
   backend:
-    image: manoharreddy123/interview-app-backend   # ✅ use your Docker Hub image
+    image: manoharreddy123/interview-app-backend
     build:
       context: .
       dockerfile: backend.Dockerfile
@@ -31,7 +33,7 @@ services:
       - ./package-lock.json:/app/package-lock.json
 
   frontend:
-    image: manoharreddy123/interview-app-frontend   # ✅ use your Docker Hub image
+    image: manoharreddy123/interview-app-frontend
     build:
       context: ./frontend
     container_name: interview-frontend
