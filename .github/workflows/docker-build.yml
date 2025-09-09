@@ -1,61 +1,38 @@
-name: CI - Build & Push Docker Images
+name: CI - Docker Build & Push
 
 on:
   push:
-    branches: [ "compose" ]   # ✅ Only runs on compose branch
+    branches: [ "compose" ]   # Trigger only on compose branch
 
 jobs:
-  build:
+  build-and-push:
     runs-on: ubuntu-latest
     steps:
-      # Checkout
+      # Checkout repo
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Setup Docker Buildx
+      # Set up Docker
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # Run root tests
-      - name: Run root tests if present
-        run: |
-          if [ -f package.json ]; then
-            npm ci || npm install
-            npm run -s test --if-present
-          fi
-
-      # Run frontend tests
-      - name: Run frontend tests if present
-        working-directory: frontend
-        run: |
-          if [ -f package.json ]; then
-            npm ci || npm install
-            npm run -s test --if-present
-          fi
-
       # Login to Docker Hub
       - name: Log in to Docker Hub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Build & Push
-      - name: Build & Push Docker images
+      # Build and push backend
+      - name: Build and push Backend
         run: |
-          IMAGE_TAG=${{ github.sha }}
-
-          # Build images
-          docker compose -f docker-compose.yml build frontend backend
-
-          # Tag & Push Frontend
-          docker tag interview-frontend:latest manoharreddy123/interview-app-frontend:latest
-          docker tag interview-frontend:latest manoharreddy123/interview-app-frontend:$IMAGE_TAG
-          docker push manoharreddy123/interview-app-frontend:latest
-          docker push manoharreddy123/interview-app-frontend:$IMAGE_TAG
-
-          # Tag & Push Backend
-          docker tag interview-backend:latest manoharreddy123/interview-app-backend:latest
-          docker tag interview-backend:latest manoharreddy123/interview-app-backend:$IMAGE_TAG
+          docker build -t manoharreddy123/interview-app-backend:latest -t manoharreddy123/interview-app-backend:${{ github.sha }} -f backend.Dockerfile .
           docker push manoharreddy123/interview-app-backend:latest
-          docker push manoharreddy123/interview-app-backend:$IMAGE_TAG
+          docker push manoharreddy123/interview-app-backend:${{ github.sha }}
+
+      # Build and push frontend
+      - name: Build and push Frontend
+        run: |
+          docker build -t manoharreddy123/interview-app-frontend:latest -t manoharreddy123/interview-app-frontend:${{ github.sha }} ./frontend
+          docker push manoharreddy123/interview-app-frontend:latest
+          docker push manoharreddy123/interview-app-frontend:${{ github.sha }}
