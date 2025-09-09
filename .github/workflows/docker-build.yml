@@ -9,51 +9,64 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout repo
+      # 1️⃣ Checkout repo
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Set up Docker
+      # 2️⃣ Set up Docker
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # Build all services using docker-compose.yml
-      - name: Docker Compose Build
-        run: docker compose -f docker-compose.yml build
-
-      # Optional: Run backend (root) tests if present
-      - name: Run root tests if present
-        run: |
-          if [ -f package.json ]; then
-            npm ci || npm install
-            npm run -s test --if-present
-          fi
-
-      # Optional: Run frontend tests if present
-      - name: Run frontend tests if present
-        working-directory: frontend
-        run: |
-          if [ -f package.json ]; then
-            npm ci || npm install
-            npm run -s test --if-present
-          fi
-
-      # Log in to Docker Hub
+      # 3️⃣ Log in to Docker Hub
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Push latest images defined in docker-compose.yml
+      # 4️⃣ Docker Compose Build with secrets
+      - name: Docker Compose Build
+        env:
+          MONGO_DB_URI: ${{ secrets.MONGO_DB_URI }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          NODE_ENV: ${{ secrets.NODE_ENV }}
+          PORT: ${{ secrets.PORT }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: docker compose -f docker-compose.yml build
+
+      # 5️⃣ Run backend (root) tests if present
+      - name: Run backend tests if present
+        env:
+          MONGO_DB_URI: ${{ secrets.MONGO_DB_URI }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          NODE_ENV: ${{ secrets.NODE_ENV }}
+          PORT: ${{ secrets.PORT }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          if [ -f package.json ]; then
+            npm ci || npm install
+            npm run -s test --if-present
+          fi
+
+      # 6️⃣ Run frontend tests if present
+      - name: Run frontend tests if present
+        working-directory: frontend
+        env:
+          NODE_ENV: ${{ secrets.NODE_ENV }}
+        run: |
+          if [ -f package.json ]; then
+            npm ci || npm install
+            npm run -s test --if-present
+          fi
+
+      # 7️⃣ Push latest images defined in docker-compose.yml
       - name: Docker Compose Push (latest)
         run: docker compose -f docker-compose.yml push
 
-      # Tag images with Git SHA and push
+      # 8️⃣ Tag images with Git SHA and push
       - name: Tag & Push versioned images (SHA)
         run: |
           GIT_SHA=${{ github.sha }}
-          # Ensure these image names match docker-compose.yml
           BACKEND=manoharreddy123/interview-app-backend
           FRONTEND=manoharreddy123/interview-app-frontend
           docker tag $BACKEND:latest $BACKEND:${GIT_SHA}
