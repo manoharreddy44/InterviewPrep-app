@@ -30,7 +30,7 @@ services:
     image: manoharreddy123/interview-app-frontend:latest
     build:
       context: ./frontend
-      dockerfile: ./frontend/Dockerfile
+      dockerfile: ./Dockerfile
     container_name: interview-frontend
     restart: always
     ports:
