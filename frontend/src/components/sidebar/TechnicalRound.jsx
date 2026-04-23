@@ -24,6 +24,7 @@ export default function TechnicalRound() {
   const [loading, setLoading] = useState(false);
   const [finalEvaluation, setFinalEvaluation] = useState(null);
   const [step, setStep] = useState('form'); // form, question, feedback, final
+  const [apiError, setApiError] = useState(null); // { quotaExceeded, message }
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [recognitionInstance, setRecognitionInstance] = useState(null);
@@ -270,6 +271,7 @@ export default function TechnicalRound() {
   const handleStart = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setApiError(null);
     try {
       const res = await axios.post('/api/interview/technical/question', {
         jobRole,
@@ -287,7 +289,8 @@ export default function TechnicalRound() {
       setQuestionFeedback('');
       setStep('question');
     } catch (err) {
-      alert('Failed to get question');
+      const data = err.response?.data;
+      setApiError({ quotaExceeded: data?.quotaExceeded, message: data?.error || 'Failed to get question' });
     } finally {
       setLoading(false);
     }
@@ -325,7 +328,8 @@ export default function TechnicalRound() {
       setPreviousQuestionScore(res.data.currentQuestionScore);
       setStep('feedback');
     } catch (err) {
-      alert('Failed to submit response');
+      const data = err.response?.data;
+      setApiError({ quotaExceeded: data?.quotaExceeded, message: data?.error || 'Failed to submit response' });
     } finally {
       setLoading(false);
     }
@@ -351,7 +355,8 @@ export default function TechnicalRound() {
       setQuestionFeedback('');
       setStep('question');
     } catch (err) {
-      alert('Failed to get next question');
+      const data = err.response?.data;
+      setApiError({ quotaExceeded: data?.quotaExceeded, message: data?.error || 'Failed to get next question' });
     } finally {
       setLoading(false);
     }
@@ -374,7 +379,8 @@ export default function TechnicalRound() {
       });
       setStep('final');
     } catch (err) {
-      alert('Failed to get final evaluation');
+      const data = err.response?.data;
+      setApiError({ quotaExceeded: data?.quotaExceeded, message: data?.error || 'Failed to get final evaluation' });
     } finally {
       setLoading(false);
     }
@@ -384,6 +390,30 @@ export default function TechnicalRound() {
   return (
     <div className="max-w-xl mx-auto p-6 bg-base-100 rounded-xl shadow">
       <h2 className="text-2xl font-bold mb-4 text-primary">Technical Interview Round</h2>
+
+      {/* Quota / API Error Banner */}
+      {apiError && (
+        <div className={`rounded-xl p-4 mb-5 flex items-start gap-3 border ${
+          apiError.quotaExceeded
+            ? 'bg-amber-50 border-amber-300 text-amber-900'
+            : 'bg-red-50 border-red-300 text-red-900'
+        }`}>
+          <span className="text-2xl">{apiError.quotaExceeded ? '⚠️' : '❌'}</span>
+          <div>
+            {apiError.quotaExceeded ? (
+              <>
+                <p className="font-bold text-base">Today's AI Quota Exhausted</p>
+                <p className="text-sm mt-1">The free-tier AI limit has been reached for today. The quota resets every 24 hours — please come back tomorrow to continue your interview practice.</p>
+              </>
+            ) : (
+              <>
+                <p className="font-bold text-base">Something went wrong</p>
+                <p className="text-sm mt-1">{apiError.message}</p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
       
       {/* Resume Requirement Notice - Hidden for demo users and after form step */}
       {!isDemo && step === 'form' && (

@@ -198,7 +198,12 @@ const GroupDiscussions = () => {
       toast.success('New topic generated! Get ready!');
     } catch (err) {
       console.error(err);
-      toast.error(err.response?.data?.error || err.message || 'Something went wrong');
+      const data = err.response?.data;
+      if (data?.quotaExceeded) {
+        toast.error("⚠️ Today's AI quota is exhausted. The limit resets every 24 hours — please try again tomorrow.", { duration: 6000 });
+      } else {
+        toast.error(data?.error || err.message || 'Something went wrong');
+      }
     }
     setIsLoading(false);
   };
@@ -248,7 +253,12 @@ const GroupDiscussions = () => {
       toast.success('Response evaluated successfully!');
     } catch (err) {
       console.error(err);
-      toast.error(err.response?.data?.error || err.message || 'Evaluation failed');
+      const data = err.response?.data;
+      if (data?.quotaExceeded) {
+        toast.error("⚠️ Today's AI quota is exhausted. The limit resets every 24 hours — please try again tomorrow.", { duration: 6000 });
+      } else {
+        toast.error(data?.error || err.message || 'Evaluation failed');
+      }
     }
     setIsLoading(false);
   };
